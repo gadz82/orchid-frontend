@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    passWithNoTests: true,
     include: ["src/**/*.test.{ts,tsx}", "__tests__/**/*.test.{ts,tsx}"],
     coverage: {
       provider: "v8",

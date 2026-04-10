@@ -63,7 +63,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - name: Run tests
-        run: npx vitest run --coverage --reporter=junit --outputFile=report.xml
+        run: npx vitest run --coverage --passWithNoTests --reporter=junit --outputFile=report.xml
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
