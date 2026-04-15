@@ -9,6 +9,7 @@ import {OrchidIcon} from "@/components/icons/orchid-icon";
 import {MessageList} from "./message-list";
 import {ChatInput} from "./chat-input";
 import {ChatSidebar} from "./chat-sidebar";
+import {MCPAuthStatus} from "./mcp-auth-status";
 import type {Message} from "./message-bubble";
 import {
     sendChatMessage,
@@ -267,8 +268,9 @@ export function ChatContainer() {
                         <h1 className="text-sm font-bold text-orchid-text">Orchid</h1>
                     </div>
 
-                    {/* User info + logout */}
+                    {/* MCP auth status + User info + logout */}
                     <div className="flex items-center gap-3">
+                        <MCPAuthStatus />
                         {session?.user?.name && (
                             <div className="flex items-center gap-2 text-sm text-orchid-muted">
                                 <User className="h-4 w-4 text-orchid-muted"/>

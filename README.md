@@ -40,7 +40,8 @@ src/
     layout.tsx               Root layout
     api/auth/[...nextauth]/  NextAuth route handler
   components/chat/
-    chat-container.tsx       Main layout: sidebar + chat + drag-drop overlay
+    chat-container.tsx       Main layout: sidebar + chat + drag-drop + MCP auth
+    mcp-auth-status.tsx      MCP OAuth server authorization status panel
     chat-sidebar.tsx         Chat list with new/delete/share actions
     chat-input.tsx           Message input with file attachment
     message-bubble.tsx       User/assistant bubbles with Markdown rendering
@@ -85,7 +86,9 @@ NEXT_PUBLIC_API_URL=http://localhost:8000   # orchid-api URL
 
 ## Server Actions
 
-All API communication goes through server-side actions in `app/actions/chats.ts`:
+All API communication goes through server-side actions:
+
+**`app/actions/chats.ts`** -- Chat CRUD and messaging:
 
 | Function | Method | API Endpoint | Content-Type |
 |----------|--------|-------------|-------------|
@@ -95,6 +98,14 @@ All API communication goes through server-side actions in `app/actions/chats.ts`
 | `deleteChat(chatId)` | DELETE | `/chats/{id}` | -- |
 | `sendChatMessage(chatId, msg, files?)` | POST | `/chats/{id}/messages` | **multipart** |
 | `shareChat(chatId)` | POST | `/chats/{id}/share` | -- |
+
+**`app/actions/mcp-auth.ts`** -- MCP per-server OAuth:
+
+| Function | Method | API Endpoint |
+|----------|--------|-------------|
+| `listMCPAuthServers()` | GET | `/mcp/auth/servers` |
+| `getMCPAuthorizeUrl(name)` | GET | `/mcp/auth/servers/{name}/authorize` |
+| `revokeMCPToken(name)` | DELETE | `/mcp/auth/servers/{name}/token` |
 
 ## File Upload
 
