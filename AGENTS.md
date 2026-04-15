@@ -23,6 +23,7 @@ src/
 ├── app/
 │   ├── actions/
 │   │   ├── chats.ts          # Multi-chat CRUD + messaging (PRIMARY)
+│   │   ├── mcp-auth.ts       # MCP per-server OAuth: list, authorize, revoke
 │   │   ├── chat.ts           # Legacy single-shot (DEPRECATED)
 │   │   └── upload.ts         # Standalone upload (DEPRECATED)
 │   ├── chat/page.tsx         # Protected chat page
@@ -30,7 +31,8 @@ src/
 │   ├── layout.tsx            # Root layout
 │   └── api/auth/[...nextauth]/route.ts
 ├── components/chat/
-│   ├── chat-container.tsx    # Main layout: sidebar + chat + drag-drop
+│   ├── chat-container.tsx    # Main layout: sidebar + chat + drag-drop + MCP auth
+│   ├── mcp-auth-status.tsx   # MCP OAuth server authorization status panel
 │   ├── chat-sidebar.tsx      # Chat list, new/delete/share
 │   ├── chat-input.tsx        # Message input + file attachment
 │   ├── message-bubble.tsx    # User/assistant bubbles + Markdown
@@ -139,7 +141,17 @@ Use `bg-orchid-accent`, `text-orchid-dark`, etc. in components.
 | `shareChat(chatId)`                    | POST   | `/chats/{id}/share`    | —             |
 
 **`sendChatMessage` is multipart** — builds FormData, does NOT set Content-Type header (browser sets boundary
-automatically).
+automatically). Returns `authRequired?: string[]` when MCP servers need OAuth authorization.
+
+## Server Actions (`app/actions/mcp-auth.ts`)
+
+| Function                          | Method | Endpoint                              |
+|-----------------------------------|--------|---------------------------------------|
+| `listMCPAuthServers()`            | GET    | `/mcp/auth/servers`                   |
+| `getMCPAuthorizeUrl(serverName)`  | GET    | `/mcp/auth/servers/{name}/authorize`  |
+| `revokeMCPToken(serverName)`      | DELETE | `/mcp/auth/servers/{name}/token`      |
+
+The `MCPAuthStatus` component (in chat header) calls these to show connection status and trigger popup-based OAuth flows.
 
 ## Common Mistakes
 
