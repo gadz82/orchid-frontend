@@ -28,6 +28,7 @@ export interface ChatResult {
     chatId: string;
     agentsUsed: string[];
     error?: string;
+    authRequired?: string[];
 }
 
 // ── Helpers ─────────────────────────────────────────────────
@@ -174,6 +175,7 @@ export async function sendChatMessage(
             response: data.response,
             chatId: data.chat_id ?? chatId,
             agentsUsed: data.agents_used ?? [],
+            authRequired: data.auth_required ?? [],
         };
     } catch (err) {
         return {
