@@ -1,9 +1,6 @@
 "use server";
 
-import {auth, signOut} from "@/lib/auth/auth";
-import {redirect} from "next/navigation";
-
-const AGENTS_API_URL = process.env.AGENTS_API_URL ?? "http://localhost:8000";
+import {AGENTS_API_URL, getHeaders, handleUnauthorized} from "./_api-client";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -14,22 +11,6 @@ export interface MCPServerAuthStatus {
     authorized: boolean;
     token_expired: boolean;
     agent_names: string[];
-}
-
-// ── Helpers ─────────────────────────────────────────────────
-
-async function handleUnauthorized(): Promise<never> {
-    await signOut({redirect: false});
-    redirect("/login");
-}
-
-async function getHeaders(): Promise<Record<string, string>> {
-    const session = await auth();
-    const token = session?.accessToken;
-    return {
-        "Content-Type": "application/json",
-        ...(token ? {Authorization: `Bearer ${token}`} : {}),
-    };
 }
 
 // ── Server Actions ──────────────────────────────────────────
