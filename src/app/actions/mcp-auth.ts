@@ -1,6 +1,7 @@
 "use server";
 
-import {AGENTS_API_URL, getHeaders, handleUnauthorized} from "./_api-client";
+import {getHeaders, handleUnauthorized} from "./_api-client";
+import {AGENTS_API_URL} from "./_api-config";
 
 // ── Types ──────────────────────────────────────────────────
 

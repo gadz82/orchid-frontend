@@ -1,24 +1,17 @@
 "use server";
 
 /**
- * Shared API client utilities for all server actions.
+ * Shared server-action helpers for API calls.
  *
- * Centralizes the API base URL, auth header construction, and
- * unauthorized session handling.  All action files import from here
- * instead of duplicating these helpers.
+ * "use server" files can only export async functions (no constants).
+ * The API base URL lives in ``_api-config.ts`` (a plain module).
  */
 
 import {auth, signOut} from "@/lib/auth/auth";
 import {redirect} from "next/navigation";
 
-export const AGENTS_API_URL =
-    process.env.AGENTS_API_URL ?? "http://localhost:8000";
-
 /**
  * Build request headers with the NextAuth JWT bearer token.
- *
- * The access token is read from the server-side session and never
- * reaches the browser.
  */
 export async function getHeaders(): Promise<Record<string, string>> {
     const session = await auth();
