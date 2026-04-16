@@ -5,7 +5,7 @@ import {getStreamConfig} from "@/app/actions/stream";
 
 export interface StreamCallbacks {
     onToken: (token: string) => void;
-    onStatus: (agent: string, status: string) => void;
+    onStatus: (agent: string, status: string, preview?: string) => void;
     onAgentResult: (agent: string, content: string) => void;
     onHandoff: (content: string) => void;
     onDone: (response: string, agentsUsed: string[], authRequired: string[]) => void;
@@ -93,7 +93,7 @@ export function useChatStream() {
                                     callbacks.onToken(data.content || "");
                                     break;
                                 case "status":
-                                    callbacks.onStatus(data.agent || "", data.status || "");
+                                    callbacks.onStatus(data.agent || "", data.status || "", data.preview);
                                     break;
                                 case "done":
                                     callbacks.onDone(

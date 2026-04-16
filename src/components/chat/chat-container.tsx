@@ -129,19 +129,29 @@ export function ChatContainer() {
                                 ),
                             );
                         },
-                        onStatus: (agent, status) => {
+                        onStatus: (agent, status, preview) => {
+                            let content: string;
                             if (status === "started") {
-                                const statusMsg: Message = {
-                                    id: crypto.randomUUID(),
-                                    role: "system",
-                                    content: `${agent} agent activated`,
-                                    timestamp: new Date(),
-                                };
-                                setMessages((prev) => {
-                                    const last = prev[prev.length - 1];
-                                    return [...prev.slice(0, -1), statusMsg, last];
-                                });
+                                content = `${agent} agent activated`;
+                            } else if (status === "done" && preview) {
+                                // Truncate preview for system message display
+                                const short = preview.length > 150
+                                    ? preview.slice(0, 150) + "…"
+                                    : preview;
+                                content = `${agent}: ${short}`;
+                            } else {
+                                return;  // skip unknown statuses
                             }
+                            const statusMsg: Message = {
+                                id: crypto.randomUUID(),
+                                role: "system",
+                                content,
+                                timestamp: new Date(),
+                            };
+                            setMessages((prev) => {
+                                const last = prev[prev.length - 1];
+                                return [...prev.slice(0, -1), statusMsg, last];
+                            });
                         },
                         onAgentResult: () => {
                             // Agent results are now included in the done event
