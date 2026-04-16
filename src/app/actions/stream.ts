@@ -1,7 +1,7 @@
 "use server";
 
 import {auth} from "@/lib/auth/auth";
-import {AGENTS_API_URL} from "./_api-client";
+import {AGENTS_API_URL} from "./_api-config";
 
 /**
  * Returns the streaming endpoint URL and auth headers.
