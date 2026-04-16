@@ -131,7 +131,6 @@ export function ChatContainer() {
                         },
                         onStatus: (agent, status) => {
                             if (status === "started") {
-                                // Insert a system message before the assistant bubble
                                 const statusMsg: Message = {
                                     id: crypto.randomUUID(),
                                     role: "system",
@@ -139,27 +138,13 @@ export function ChatContainer() {
                                     timestamp: new Date(),
                                 };
                                 setMessages((prev) => {
-                                    // Insert before the last message (the streaming assistant bubble)
                                     const last = prev[prev.length - 1];
                                     return [...prev.slice(0, -1), statusMsg, last];
                                 });
                             }
                         },
-                        onAgentResult: (agent, content) => {
-                            // Truncate long agent results for the system message
-                            const preview = content.length > 150
-                                ? content.slice(0, 150) + "…"
-                                : content;
-                            const resultMsg: Message = {
-                                id: crypto.randomUUID(),
-                                role: "system",
-                                content: `${agent}: ${preview}`,
-                                timestamp: new Date(),
-                            };
-                            setMessages((prev) => {
-                                const last = prev[prev.length - 1];
-                                return [...prev.slice(0, -1), resultMsg, last];
-                            });
+                        onAgentResult: () => {
+                            // Agent results are now included in the done event
                         },
                         onHandoff: (content) => {
                             const handoffMsg: Message = {
