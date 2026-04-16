@@ -17,6 +17,7 @@ import {
     createChat,
     listChats,
 } from "@/app/actions/chats";
+import {useChatStream} from "@/hooks/use-chat-stream";
 
 /**
  * Main chat container — multi-chat with sidebar and persistent history.
@@ -80,6 +81,8 @@ export function ChatContainer() {
         load();
     }, [activeChatId]);
 
+    const {streamMessage} = useChatStream();
+
     const handleSend = useCallback(
         async (text: string, files: File[]) => {
             if (!activeChatId) return;
@@ -100,44 +103,75 @@ export function ChatContainer() {
             setIsLoading(true);
             if (files.length > 0) setUploading(true);
 
+            // Create an empty assistant message that will be filled by streaming
+            const assistantId = crypto.randomUUID();
+            const assistantMsg: Message = {
+                id: assistantId,
+                role: "assistant",
+                content: "",
+                timestamp: new Date(),
+            };
+            setMessages((prev) => [...prev, assistantMsg]);
+
             try {
-                let fileData: FormData | undefined;
-                if (files.length > 0) {
-                    fileData = new FormData();
-                    for (const file of files) {
-                        fileData.append("files", file);
-                    }
-                }
-
-                const result = await sendChatMessage(activeChatId, text, fileData);
-
-                if (result.error && result.error.includes("Not authenticated")) {
-                    await signOut({callbackUrl: "/login"});
-                    return;
-                }
-
-                const assistantMsg: Message = {
-                    id: crypto.randomUUID(),
-                    role: "assistant",
-                    content: result.error ? `Error: ${result.error}` : result.response,
-                    agentsUsed: result.agentsUsed,
-                    timestamp: new Date(),
-                };
-                setMessages((prev) => [...prev, assistantMsg]);
+                await streamMessage(
+                    activeChatId,
+                    text,
+                    files.length > 0 ? files : null,
+                    {
+                        onToken: (token) => {
+                            // Append token to the streaming assistant message
+                            setMessages((prev) =>
+                                prev.map((m) =>
+                                    m.id === assistantId
+                                        ? {...m, content: m.content + token}
+                                        : m,
+                                ),
+                            );
+                        },
+                        onStatus: (_agent, _status) => {
+                            // Could show agent badges pulse here
+                        },
+                        onDone: (response, agentsUsed, _authRequired) => {
+                            // Finalize the message with agents and ensure content is complete
+                            setMessages((prev) =>
+                                prev.map((m) =>
+                                    m.id === assistantId
+                                        ? {...m, content: response || m.content, agentsUsed}
+                                        : m,
+                                ),
+                            );
+                        },
+                        onError: (error) => {
+                            if (error.includes("Not authenticated")) {
+                                signOut({callbackUrl: "/login"});
+                                return;
+                            }
+                            // Update the streaming message with the error
+                            setMessages((prev) =>
+                                prev.map((m) =>
+                                    m.id === assistantId
+                                        ? {...m, content: m.content || `Error: ${error}`}
+                                        : m,
+                                ),
+                            );
+                        },
+                    },
+                );
             } catch {
-                const errorMsg: Message = {
-                    id: crypto.randomUUID(),
-                    role: "assistant",
-                    content: "Sorry, something went wrong. Please try again.",
-                    timestamp: new Date(),
-                };
-                setMessages((prev) => [...prev, errorMsg]);
+                setMessages((prev) =>
+                    prev.map((m) =>
+                        m.id === assistantId
+                            ? {...m, content: m.content || "Sorry, something went wrong. Please try again."}
+                            : m,
+                    ),
+                );
             } finally {
                 setIsLoading(false);
                 setUploading(false);
             }
         },
-        [activeChatId]
+        [activeChatId, streamMessage],
     );
 
     const ACCEPTED_TYPES = new Set([
