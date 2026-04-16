@@ -145,6 +145,22 @@ export function ChatContainer() {
                                 });
                             }
                         },
+                        onAgentResult: (agent, content) => {
+                            // Truncate long agent results for the system message
+                            const preview = content.length > 150
+                                ? content.slice(0, 150) + "…"
+                                : content;
+                            const resultMsg: Message = {
+                                id: crypto.randomUUID(),
+                                role: "system",
+                                content: `${agent}: ${preview}`,
+                                timestamp: new Date(),
+                            };
+                            setMessages((prev) => {
+                                const last = prev[prev.length - 1];
+                                return [...prev.slice(0, -1), resultMsg, last];
+                            });
+                        },
                         onHandoff: (content) => {
                             const handoffMsg: Message = {
                                 id: crypto.randomUUID(),
