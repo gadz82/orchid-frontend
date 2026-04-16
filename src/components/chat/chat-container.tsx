@@ -129,8 +129,33 @@ export function ChatContainer() {
                                 ),
                             );
                         },
-                        onStatus: (_agent, _status) => {
-                            // Could show agent badges pulse here
+                        onStatus: (agent, status) => {
+                            if (status === "started") {
+                                // Insert a system message before the assistant bubble
+                                const statusMsg: Message = {
+                                    id: crypto.randomUUID(),
+                                    role: "system",
+                                    content: `${agent} agent activated`,
+                                    timestamp: new Date(),
+                                };
+                                setMessages((prev) => {
+                                    // Insert before the last message (the streaming assistant bubble)
+                                    const last = prev[prev.length - 1];
+                                    return [...prev.slice(0, -1), statusMsg, last];
+                                });
+                            }
+                        },
+                        onHandoff: (content) => {
+                            const handoffMsg: Message = {
+                                id: crypto.randomUUID(),
+                                role: "system",
+                                content,
+                                timestamp: new Date(),
+                            };
+                            setMessages((prev) => {
+                                const last = prev[prev.length - 1];
+                                return [...prev.slice(0, -1), handoffMsg, last];
+                            });
                         },
                         onDone: (response, agentsUsed, _authRequired) => {
                             // Finalize the message with agents and ensure content is complete

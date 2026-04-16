@@ -4,7 +4,7 @@ import {OrchidIcon} from "@/components/icons/orchid-icon";
 
 export interface Message {
     id: string;
-    role: "user" | "assistant";
+    role: "user" | "assistant" | "system";
     content: string;
     agentsUsed?: string[];
     timestamp: Date;
