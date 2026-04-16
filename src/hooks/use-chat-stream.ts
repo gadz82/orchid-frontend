@@ -6,6 +6,7 @@ import {getStreamConfig} from "@/app/actions/stream";
 export interface StreamCallbacks {
     onToken: (token: string) => void;
     onStatus: (agent: string, status: string) => void;
+    onHandoff: (content: string) => void;
     onDone: (response: string, agentsUsed: string[], authRequired: string[]) => void;
     onError: (error: string) => void;
 }
@@ -99,6 +100,9 @@ export function useChatStream() {
                                         data.agents_used || [],
                                         data.auth_required || [],
                                     );
+                                    break;
+                                case "handoff":
+                                    callbacks.onHandoff(data.content || "");
                                     break;
                                 case "error":
                                     callbacks.onError(data.message || "Unknown error");
