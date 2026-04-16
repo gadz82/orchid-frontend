@@ -1,8 +1,7 @@
 "use server";
 
 import {auth} from "@/lib/auth/auth";
-
-const AGENTS_API_URL = process.env.AGENTS_API_URL ?? "http://localhost:8000";
+import {AGENTS_API_URL} from "./_api-client";
 
 /**
  * Returns the streaming endpoint URL and auth headers.

@@ -12,8 +12,7 @@ interface ChatInputProps {
     onExternalFilesChange?: (files: File[]) => void;
 }
 
-const ACCEPTED =
-    ".pdf,.docx,.xlsx,.csv,.txt,.md,.png,.jpg,.jpeg";
+import {ACCEPTED_INPUT_STRING as ACCEPTED} from "@/lib/constants";
 
 /**
  * Chat input with auto-resize textarea, send button, and file attachment.
