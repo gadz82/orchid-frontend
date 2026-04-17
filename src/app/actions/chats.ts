@@ -1,7 +1,7 @@
 "use server";
 
 import {auth} from "@/lib/auth/auth";
-import {getAuthHeaders, getHeaders, handleUnauthorized} from "./_api-client";
+import {getHeaders, handleUnauthorized} from "./_api-client";
 import {AGENTS_API_URL} from "./_api-config";
 
 // ── Types ──────────────────────────────────────────────────

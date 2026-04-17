@@ -25,10 +25,20 @@ export function MCPAuthStatus() {
         setServers(data);
     }, []);
 
-    // Load on mount
+    // Load on mount.  The setState is guarded behind ``await`` (so it
+    // isn't synchronous with the effect body — satisfies the React 19
+    // ``react-hooks/set-state-in-effect`` rule) and by a ``cancelled``
+    // flag so a late response can't write to an unmounted component.
     useEffect(() => {
-        refresh();
-    }, [refresh]);
+        let cancelled = false;
+        (async () => {
+            const data = await listMCPAuthServers();
+            if (!cancelled) setServers(data);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     // Listen for postMessage from OAuth popup
     useEffect(() => {
