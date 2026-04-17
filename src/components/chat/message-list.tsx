@@ -1,9 +1,10 @@
 "use client";
 
-import {useEffect, useRef} from "react";
+import {useEffect, useRef, useState} from "react";
 import {MessageBubble, type Message} from "./message-bubble";
 import {LoadingIndicator} from "./loading-indicator";
 import {OrchidIcon} from "@/components/icons/orchid-icon";
+import {ChevronDown} from "lucide-react";
 
 interface MessageListProps {
     messages: Message[];
@@ -11,7 +12,68 @@ interface MessageListProps {
 }
 
 /**
+ * Groups consecutive items by a key function.
+ * Returns an array of {type: "single"|"group", items: Message[]}.
+ */
+function groupMessages(messages: Message[]) {
+    const result: Array<{ type: "bubble" | "system-group"; items: Message[] }> = [];
+    let systemBuffer: Message[] = [];
+
+    const flushSystem = () => {
+        if (systemBuffer.length > 0) {
+            result.push({type: "system-group", items: [...systemBuffer]});
+            systemBuffer = [];
+        }
+    };
+
+    for (const msg of messages) {
+        if (msg.role === "system") {
+            systemBuffer.push(msg);
+        } else {
+            flushSystem();
+            result.push({type: "bubble", items: [msg]});
+        }
+    }
+    flushSystem();
+    return result;
+}
+
+function SystemMessageGroup({messages}: { messages: Message[] }) {
+    const [expanded, setExpanded] = useState(false);
+    const last = messages[messages.length - 1];
+    const hasMore = messages.length > 1;
+
+    return (
+        <div className="flex flex-col items-center py-0.5">
+            {expanded && hasMore && (
+                <div className="space-y-0.5 mb-0.5">
+                    {messages.slice(0, -1).map((m) => (
+                        <p key={m.id} className="text-[10px] text-orchid-muted/50 italic text-center">
+                            {m.content}
+                        </p>
+                    ))}
+                </div>
+            )}
+            <div
+                className={`flex items-center gap-1.5 ${hasMore ? "cursor-pointer" : ""}`}
+                onClick={hasMore ? () => setExpanded(!expanded) : undefined}
+            >
+                <p className="text-[11px] text-orchid-muted/70 italic">
+                    {last.content}
+                </p>
+                {hasMore && (
+                    <ChevronDown
+                        className={`h-3 w-3 text-orchid-muted/50 transition-transform ${expanded ? "rotate-180" : ""}`}
+                    />
+                )}
+            </div>
+        </div>
+    );
+}
+
+/**
  * Scrollable message list — auto-scrolls to the latest message.
+ * Consecutive system messages are grouped with only the last visible.
  */
 export function MessageList({messages, isLoading}: MessageListProps) {
     const bottomRef = useRef<HTMLDivElement>(null);
@@ -19,6 +81,8 @@ export function MessageList({messages, isLoading}: MessageListProps) {
     useEffect(() => {
         bottomRef.current?.scrollIntoView({behavior: "smooth"});
     }, [messages, isLoading]);
+
+    const groups = groupMessages(messages);
 
     return (
         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
@@ -39,9 +103,13 @@ export function MessageList({messages, isLoading}: MessageListProps) {
                 </div>
             )}
 
-            {messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg}/>
-            ))}
+            {groups.map((group, i) =>
+                group.type === "system-group" ? (
+                    <SystemMessageGroup key={`sys-${i}`} messages={group.items}/>
+                ) : (
+                    <MessageBubble key={group.items[0].id} message={group.items[0]}/>
+                ),
+            )}
 
             {isLoading && <LoadingIndicator/>}
 

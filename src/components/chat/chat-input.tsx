@@ -1,6 +1,6 @@
 "use client";
 
-import {useState, useRef, useCallback} from "react";
+import {useState, useRef, useCallback, useMemo} from "react";
 import {Send, Paperclip, X, FileText, Loader2} from "lucide-react";
 
 interface ChatInputProps {
@@ -12,8 +12,7 @@ interface ChatInputProps {
     onExternalFilesChange?: (files: File[]) => void;
 }
 
-const ACCEPTED =
-    ".pdf,.docx,.xlsx,.csv,.txt,.md,.png,.jpg,.jpeg";
+import {ACCEPTED_INPUT_STRING as ACCEPTED} from "@/lib/constants";
 
 /**
  * Chat input with auto-resize textarea, send button, and file attachment.
@@ -33,8 +32,13 @@ export function ChatInput({
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Merge local and external (drag-and-drop) files
-    const pendingFiles = [...localFiles, ...externalFiles];
+    // Merge local and external (drag-and-drop) files.  Memoised so the
+    // reference stays stable across renders — ``handleSubmit`` depends on
+    // it and would otherwise be recreated on every keystroke.
+    const pendingFiles = useMemo(
+        () => [...localFiles, ...externalFiles],
+        [localFiles, externalFiles],
+    );
 
     const handleSubmit = useCallback(() => {
         const trimmed = value.trim();
