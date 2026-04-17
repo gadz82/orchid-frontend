@@ -40,10 +40,22 @@ export function ChatListProvider({children}: {children: ReactNode}) {
         setLoading(false);
     }, []);
 
-    // Load on mount
+    // Load on mount.  Inlined so the setState calls live behind an
+    // ``await`` (satisfies React 19's ``react-hooks/set-state-in-effect``
+    // rule) and a ``cancelled`` flag prevents a late response from
+    // writing into an unmounted provider.
     useEffect(() => {
-        refreshChats();
-    }, [refreshChats]);
+        let cancelled = false;
+        (async () => {
+            const result = await listChats();
+            if (cancelled) return;
+            setChats(result);
+            setLoading(false);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const handleCreateChat = useCallback(async () => {
         const session = await createChat();
