@@ -29,7 +29,12 @@ declare module "next-auth" {
     }
 }
 
-declare module "next-auth/jwt" {
+// In NextAuth v5 the ``JWT`` interface lives in ``@auth/core/jwt`` —
+// augmenting ``next-auth/jwt`` no longer resolves under
+// ``moduleResolution: bundler`` in the app tsconfig.  Augment the
+// upstream module instead so the callback below sees a typed
+// ``access_token`` on the token object.
+declare module "@auth/core/jwt" {
     interface JWT {
         access_token?: string;
     }

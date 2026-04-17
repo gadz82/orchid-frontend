@@ -4,7 +4,7 @@ import {OrchidIcon} from "@/components/icons/orchid-icon";
 
 export interface Message {
     id: string;
-    role: "user" | "assistant";
+    role: "user" | "assistant" | "system";
     content: string;
     agentsUsed?: string[];
     timestamp: Date;
@@ -71,11 +71,7 @@ export function MessageBubble({message}: MessageBubbleProps) {
                 )}
 
                 {/* Timestamp */}
-                <p
-                    className={`mt-1 text-[10px] ${
-                        isUser ? "text-orchid-muted/60" : "text-orchid-muted/60"
-                    }`}
-                >
+                <p className="mt-1 text-[10px] text-orchid-muted/60">
                     {message.timestamp.toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",

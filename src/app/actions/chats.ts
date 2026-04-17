@@ -1,9 +1,8 @@
 "use server";
 
-import {auth, signOut} from "@/lib/auth/auth";
-import {redirect} from "next/navigation";
-
-const AGENTS_API_URL = process.env.AGENTS_API_URL ?? "http://localhost:8000";
+import {auth} from "@/lib/auth/auth";
+import {getHeaders, handleUnauthorized} from "./_api-client";
+import {AGENTS_API_URL} from "./_api-config";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -31,38 +30,16 @@ export interface ChatResult {
     authRequired?: string[];
 }
 
-// ── Helpers ─────────────────────────────────────────────────
-
-/**
- * Handle 401 from the backend — destroy the NextAuth session and
- * redirect to the login page.
- */
-async function handleUnauthorized(): Promise<never> {
-    await signOut({redirect: false});
-    redirect("/login");
-}
-
-async function getHeaders(): Promise<Record<string, string>> {
-    const session = await auth();
-    const token = session?.accessToken;
-    return {
-        "Content-Type": "application/json",
-        ...(token ? {Authorization: `Bearer ${token}`} : {}),
-    };
-}
-
 // ── CRUD ────────────────────────────────────────────────────
 
 export async function createChat(title?: string): Promise<ChatSession | null> {
     try {
         const headers = await getHeaders();
-        console.log("[createChat] URL:", `${AGENTS_API_URL}/chats`, "headers:", Object.keys(headers));
         const res = await fetch(`${AGENTS_API_URL}/chats`, {
             method: "POST",
             headers,
             body: JSON.stringify({title: title || ""}),
         });
-        console.log("[createChat] status:", res.status);
         if (res.status === 401) await handleUnauthorized();
         if (!res.ok) {
             const text = await res.text();
