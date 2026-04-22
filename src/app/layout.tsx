@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
     title: "Orchid — AI Assistant",
     description:
-        "Orchid AI-powered assistant for courses, enrollments, and notifications",
+        "Orchid — multi-agent AI assistant",
     icons: {
         icon: "/icon.svg",
     },
