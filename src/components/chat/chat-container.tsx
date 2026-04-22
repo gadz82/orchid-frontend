@@ -152,7 +152,7 @@ export function ChatContainer() {
                                 return [...prev.slice(0, -1), handoffMsg, last];
                             });
                         },
-                        onDone: (response, agentsUsed) => {
+                        onDone: (response, agentsUsed, authRequired) => {
                             setMessages((prev) =>
                                 prev.map((m) =>
                                     m.id === assistantId
@@ -160,6 +160,15 @@ export function ChatContainer() {
                                         : m,
                                 ),
                             );
+                            // Surface unauthorised MCP servers to the
+                            // header chip so it auto-expands and pulses.
+                            if (authRequired && authRequired.length > 0) {
+                                window.dispatchEvent(
+                                    new CustomEvent("mcp-auth-needed", {
+                                        detail: {servers: authRequired},
+                                    }),
+                                );
+                            }
                         },
                         onError: (error) => {
                             if (error.includes("Not authenticated")) {
