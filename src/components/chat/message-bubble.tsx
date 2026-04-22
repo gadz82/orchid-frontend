@@ -1,5 +1,6 @@
 import {User} from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {OrchidIcon} from "@/components/icons/orchid-icon";
 
 export interface Message {
@@ -50,8 +51,8 @@ export function MessageBubble({message}: MessageBubbleProps) {
                     <p className="whitespace-pre-wrap">{message.content}</p>
                 ) : (
                     <div
-                        className="prose prose-sm prose-invert max-w-none [&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_li]:my-0.5 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-bold [&_h2]:font-semibold [&_h3]:font-medium [&_pre]:bg-orchid-card [&_pre]:rounded-lg [&_pre]:p-2 [&_pre]:border [&_pre]:border-orchid-border [&_code]:text-xs [&_code]:bg-orchid-card [&_code]:rounded [&_code]:px-1 [&_code]:text-orchid-accent-glow [&_a]:text-orchid-accent [&_a]:underline">
-                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                        className="prose prose-sm prose-invert max-w-none [&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_li]:my-0.5 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-bold [&_h2]:font-semibold [&_h3]:font-medium [&_pre]:bg-orchid-card [&_pre]:rounded-lg [&_pre]:p-2 [&_pre]:border [&_pre]:border-orchid-border [&_code]:text-xs [&_code]:bg-orchid-card [&_code]:rounded [&_code]:px-1 [&_code]:text-orchid-accent-glow [&_a]:text-orchid-accent [&_a]:underline [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_th]:border [&_th]:border-orchid-border [&_th]:bg-orchid-card [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-semibold [&_td]:border [&_td]:border-orchid-border [&_td]:px-2 [&_td]:py-1 [&_td]:align-top">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
                     </div>
                 )}
 
