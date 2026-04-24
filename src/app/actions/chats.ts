@@ -1,5 +1,7 @@
 "use server";
 
+import {unstable_rethrow} from "next/navigation";
+
 import {auth} from "@/lib/auth/auth";
 import {getHeaders, handleUnauthorized} from "./_api-client";
 import {AGENTS_API_URL} from "./_api-config";
@@ -48,6 +50,7 @@ export async function createChat(title?: string): Promise<ChatSession | null> {
         }
         return await res.json();
     } catch (err) {
+        unstable_rethrow(err);
         console.error("[createChat] error:", err);
         return null;
     }
@@ -63,7 +66,8 @@ export async function listChats(): Promise<ChatSession[]> {
         if (res.status === 401) await handleUnauthorized();
         if (!res.ok) return [];
         return await res.json();
-    } catch {
+    } catch (err) {
+        unstable_rethrow(err);
         return [];
     }
 }
@@ -78,7 +82,8 @@ export async function loadMessages(chatId: string): Promise<ChatMessageOut[]> {
         if (res.status === 401) await handleUnauthorized();
         if (!res.ok) return [];
         return await res.json();
-    } catch {
+    } catch (err) {
+        unstable_rethrow(err);
         return [];
     }
 }
@@ -92,7 +97,8 @@ export async function deleteChat(chatId: string): Promise<boolean> {
         });
         if (res.status === 401) await handleUnauthorized();
         return res.ok;
-    } catch {
+    } catch (err) {
+        unstable_rethrow(err);
         return false;
     }
 }
@@ -155,6 +161,7 @@ export async function sendChatMessage(
             authRequired: data.auth_required ?? [],
         };
     } catch (err) {
+        unstable_rethrow(err);
         return {
             response: "",
             chatId,
@@ -173,7 +180,8 @@ export async function shareChat(chatId: string): Promise<boolean> {
         });
         if (res.status === 401) await handleUnauthorized();
         return res.ok;
-    } catch {
+    } catch (err) {
+        unstable_rethrow(err);
         return false;
     }
 }

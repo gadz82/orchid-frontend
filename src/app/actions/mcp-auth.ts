@@ -1,5 +1,7 @@
 "use server";
 
+import {unstable_rethrow} from "next/navigation";
+
 import {getHeaders, handleUnauthorized} from "./_api-client";
 import {AGENTS_API_URL} from "./_api-config";
 
@@ -37,7 +39,8 @@ export async function listMCPAuthServers(): Promise<MCPServerAuthStatus[]> {
         if (res.status === 401) await handleUnauthorized();
         if (!res.ok) return [];
         return await res.json();
-    } catch {
+    } catch (err) {
+        unstable_rethrow(err);
         return [];
     }
 }
@@ -77,6 +80,7 @@ export async function getMCPAuthorizeUrl(serverName: string): Promise<MCPAuthori
         }
         return {kind: "ok", url: data.authorize_url};
     } catch (err) {
+        unstable_rethrow(err);
         return {
             kind: "error",
             message: err instanceof Error ? err.message : String(err),
@@ -93,7 +97,8 @@ export async function revokeMCPToken(serverName: string): Promise<boolean> {
         });
         if (res.status === 401) await handleUnauthorized();
         return res.ok || res.status === 204;
-    } catch {
+    } catch (err) {
+        unstable_rethrow(err);
         return false;
     }
 }
