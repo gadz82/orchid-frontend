@@ -39,9 +39,12 @@ src/
 │   ├── message-list.tsx      # Scrollable message list
 │   └── loading-indicator.tsx # Typing dots
 ├── lib/auth/
-│   ├── auth.ts               # NextAuth config
-│   └── oauth-provider.ts     # Generic OAuth2/OIDC provider
-└── middleware.ts              # Auth guard for /chat
+│   ├── auth.ts                  # NextAuth config (centralised on orchid-api)
+│   ├── oauth-provider.ts        # Auth.js provider with token + userinfo
+│   │                              callbacks that POST to orchid-api
+│   ├── discovery.ts             # Phase 1 — fetches /auth-info on first request
+│   └── centralised-exchange.ts  # Phases 2 + 4A + 4B — POSTs to /auth/*
+└── middleware.ts                # Auth guard for /chat
 ```
 
 ## Key Patterns
@@ -64,26 +67,44 @@ await fetch(`${API_BASE}/chats/${chatId}/messages`, {
 });
 ```
 
-### OAuth Provider Configuration
+### Auth Centralisation (Phases 1, 2, 4A, 4B)
 
-The generic provider supports two modes:
+The frontend holds **no upstream OAuth secrets** and **no upstream-specific
+config**. See [.knowledge/auth-centralisation.md](../.knowledge/auth-centralisation.md)
+for the full architecture across all packages.
 
-**OIDC auto-discovery (recommended):**
+| Phase | What lives where |
+|-------|-------------------|
+| 1 | `discovery.ts` fetches `/auth-info` on the first NextAuth request and caches the `oauth` block. Drives `client_id` / `issuer_url` / `authorization_endpoint` / `scope`. |
+| 2 | `oauth-provider.ts` overrides Auth.js's token callback to POST to `orchid-api/auth/exchange-code`. `OAUTH_CLIENT_SECRET` is no longer accepted on this side. |
+| 4A | `oauth-provider.ts` overrides Auth.js's userinfo callback to POST to `orchid-api/auth/resolve-identity`. The frontend doesn't know the upstream userinfo URL. |
+| 4B | `auth.ts:refreshAccessToken` POSTs to `orchid-api/auth/refresh-token` instead of the upstream `token_endpoint`. |
+
+### Configuration
+
 ```env
-OAUTH_ISSUER=https://your-idp.example.com/realms/your-realm
-OAUTH_CLIENT_ID=your-client-id
-OAUTH_CLIENT_SECRET=your-client-secret
+# Required
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=<random-secret>
+AGENTS_API_URL=http://localhost:8000   # discovery + every secret-bearing call
+
+# Optional
+DEV_AUTH_BYPASS=true                   # skip OAuth entirely (dev only)
+OAUTH_SCOPE=openid profile email        # override the discovered scope
 ```
 
-**Explicit endpoints (for non-OIDC providers):**
-```env
-OAUTH_CLIENT_ID=your-client-id
-OAUTH_CLIENT_SECRET=your-client-secret
-OAUTH_AUTHORIZATION_URL=https://idp.example.com/oauth2/authorize
-OAUTH_TOKEN_URL=https://idp.example.com/oauth2/token
-OAUTH_USERINFO_URL=https://idp.example.com/oauth2/userinfo
-OAUTH_SCOPE=openid profile email
-```
+The orchid-api side must wire `OrchidAuthConfigProvider` + `OrchidAuthExchangeClient` + `OrchidIdentityResolver` and the `/auth-info` `oauth` block must advertise `exchange_via_api=true`, `resolve_via_api=true`, `refresh_via_api=true`. The frontend errors at NextAuth-config-build time if any of these is missing.
+
+### Removed env surface (Phase 5)
+
+The following env vars are no longer read — operators with stale `.env.local` files will see them silently ignored, but the matching code paths are deleted so there's no rollback surface to discover:
+
+- `OAUTH_ISSUER`
+- `OAUTH_CLIENT_ID`
+- `OAUTH_CLIENT_SECRET`
+- `OAUTH_AUTHORIZATION_URL`
+- `OAUTH_TOKEN_URL`
+- `OAUTH_USERINFO_URL`
 
 ### File Upload Flow
 

@@ -34,55 +34,70 @@ npm run dev                         # http://localhost:3000
 src/
   app/
     actions/
-      chats.ts              Multi-chat CRUD + messaging (Server Actions)
-    chat/page.tsx            Protected chat page
-    login/page.tsx           OAuth login page
-    layout.tsx               Root layout
-    api/auth/[...nextauth]/  NextAuth route handler
+      chats.ts                Multi-chat CRUD + messaging (Server Actions)
+    chat/page.tsx              Protected chat page
+    login/page.tsx             OAuth login page
+    layout.tsx                 Root layout
+    api/auth/[...nextauth]/    NextAuth route handler
   components/chat/
-    chat-container.tsx       Main layout: sidebar + chat + drag-drop + MCP auth
-    mcp-auth-status.tsx      MCP OAuth server authorization status panel
-    chat-sidebar.tsx         Chat list with new/delete/share actions
-    chat-input.tsx           Message input with file attachment
-    message-bubble.tsx       User/assistant bubbles with Markdown rendering
-    message-list.tsx         Scrollable message list
-    loading-indicator.tsx    Typing indicator dots
+    chat-container.tsx         Main layout: sidebar + chat + drag-drop + MCP auth
+    mcp-auth-status.tsx        MCP OAuth server authorization status panel
+    chat-sidebar.tsx           Chat list with new/delete/share actions
+    chat-input.tsx             Message input with file attachment
+    message-bubble.tsx         User/assistant bubbles with Markdown rendering
+    message-list.tsx           Scrollable message list
+    loading-indicator.tsx      Typing indicator dots
   lib/auth/
-    auth.ts                  NextAuth configuration
-    oauth-provider.ts        Generic OAuth2/OIDC provider
-  middleware.ts              Auth guard for /chat route
+    auth.ts                    NextAuth configuration (centralised on orchid-api)
+    oauth-provider.ts          Auth.js provider with token + userinfo callbacks
+                               that POST to orchid-api's /auth/* endpoints
+    discovery.ts               Phase 1 — fetches /auth-info on first request
+    centralised-exchange.ts    Phases 2 + 4A + 4B — POSTs to /auth/exchange-code,
+                               /auth/refresh-token, /auth/resolve-identity
+  middleware.ts                Auth guard for /chat route
 ```
 
 ## Authentication
 
-The OAuth access token is stored **only** in the server-side NextAuth JWT. It never reaches the browser. All API calls go through Server Actions that proxy requests with the Bearer token.
+The frontend holds **no upstream OAuth secrets** and **no upstream-specific config**.
+Every secret-bearing call (initial code exchange, identity resolution, refresh) is
+delegated to orchid-api — see the consolidated walkthrough in
+[.knowledge/auth-centralisation.md](../.knowledge/auth-centralisation.md).
 
-### OIDC Auto-Discovery (Recommended)
+The OAuth access token is stored **only** in the server-side NextAuth JWT — the
+browser session never receives the raw token. All API calls go through Server
+Actions that proxy requests with the Bearer token.
 
-```env
-OAUTH_ISSUER=https://your-idp.example.com/realms/your-realm
-OAUTH_CLIENT_ID=your-client-id
-OAUTH_CLIENT_SECRET=your-client-secret
-```
-
-### Explicit Endpoints
-
-```env
-OAUTH_CLIENT_ID=your-client-id
-OAUTH_CLIENT_SECRET=your-client-secret
-OAUTH_AUTHORIZATION_URL=https://idp.example.com/oauth2/authorize
-OAUTH_TOKEN_URL=https://idp.example.com/oauth2/token
-OAUTH_USERINFO_URL=https://idp.example.com/oauth2/userinfo
-OAUTH_SCOPE=openid profile email
-```
-
-### Other Environment Variables
+### Required environment variables
 
 ```env
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your-random-secret-here
-NEXT_PUBLIC_API_URL=http://localhost:8000   # orchid-api URL
+AGENTS_API_URL=http://localhost:8000        # where orchid-api lives — drives discovery
 ```
+
+### Optional environment variables
+
+```env
+DEV_AUTH_BYPASS=true                        # bypass OAuth entirely (dev only)
+OAUTH_SCOPE=openid profile email             # override the discovered scope
+```
+
+### Removed in Phase 5 (no longer accepted)
+
+The following used to live on the frontend; they all moved to `orchid-api`'s
+`OrchidAuthConfigProvider` + `OrchidAuthExchangeClient` + `OrchidIdentityResolver`:
+
+```text
+OAUTH_ISSUER             OAUTH_TOKEN_URL
+OAUTH_CLIENT_ID          OAUTH_USERINFO_URL
+OAUTH_CLIENT_SECRET      OAUTH_AUTHORIZATION_URL
+```
+
+If `/auth-info` is unreachable at startup or its `oauth` block doesn't have
+`exchange_via_api` + `resolve_via_api` + `refresh_via_api` all set to `true`, the
+frontend fails the request with a clear server-side error rather than silently
+falling back to a half-broken login.
 
 ## Server Actions
 
@@ -159,6 +174,15 @@ npm run lint      # ESLint
 - **Use `next-auth/jwt`** for Server Actions, not `next-auth/react`
 - **All files in `app/actions/` must start with `"use server"`**
 - **Tailwind v4 syntax** -- no `tailwind.config.js`, use `@theme inline` in CSS
+- **Adding `OAUTH_*` env vars back to the frontend.** The frontend is a public
+  PKCE client — `client_secret` lives only on `orchid-api`. The discovered
+  `auth-info` block carries everything else. Stale env vars are silently
+  ignored; setting them won't restore a "direct upstream" path because the
+  code that consumed them was deleted in Phase 5.
+- **`/auth-info` is unreachable at frontend startup** -- the NextAuth handler
+  errors with a clear message. Check that `AGENTS_API_URL` is reachable from
+  inside the frontend container (Docker DNS) and that `orchid-api` has
+  `auth.auth_config_provider_class` wired in `orchid.yml`.
 
 ## License
 
