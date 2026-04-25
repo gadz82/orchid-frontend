@@ -6,9 +6,11 @@
 
 Multi-chat web UI for the Orchid AI agent framework, built with Next.js 15 and NextAuth v5.
 
-Provides a chat interface with persistent sidebar, file upload (drag-and-drop + paperclip), Markdown rendering, and generic OAuth2/OIDC authentication.
+Provides a chat interface with persistent sidebar, file upload (drag-and-drop + paperclip), Markdown rendering, and a fully-centralised OAuth flow that delegates every secret-bearing call to `orchid-api`.
 
-**Runtime dependency:** This project requires [orchid-api](https://github.com/gadz82/orchid-api) as its backend server. All communication happens over HTTP — there is no direct dependency on the `orchid` Python library, only on the REST endpoints that orchid-api exposes. Make sure orchid-api is running and reachable at the URL configured in `NEXT_PUBLIC_API_URL`.
+This is the **canonical and only** frontend in the monorepo. After the auth-centralisation roadmap shipped (Phases 1–5), every platform-specific concern moved to consumer-pluggable ABCs on `orchid-api`, and this generic frontend serves any consumer's OAuth flow natively via `/auth-info` discovery — no per-consumer fork required. See [.knowledge/auth-centralisation.md](../.knowledge/auth-centralisation.md) for the architectural narrative.
+
+**Runtime dependency:** This project requires [orchid-api](https://github.com/gadz82/orchid-api) as its backend server. All communication happens over HTTP — there is no direct dependency on the `orchid` Python library, only on the REST endpoints that orchid-api exposes. Make sure orchid-api is running and reachable at the URL configured in `AGENTS_API_URL`.
 
 ## Stack
 
