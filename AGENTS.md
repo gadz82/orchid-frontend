@@ -44,7 +44,9 @@ src/
 │   │                              callbacks that POST to orchid-api
 │   ├── discovery.ts             # Phase 1 — fetches /auth-info on first request
 │   └── centralised-exchange.ts  # Phases 2 + 4A + 4B — POSTs to /auth/*
-└── middleware.ts                # Auth guard for /chat
+└── proxy.ts                    # Auth guard for /chat (Next.js 16
+                                  # `proxy` convention; replaces the
+                                  # legacy `middleware.ts`)
 ```
 
 ## Key Patterns
