@@ -17,7 +17,7 @@ import {
     exchangeAuthorizationCode,
     refreshUpstreamToken,
     resolveIdentity,
-} from "./centralised-exchange";
+} from "../centralised-exchange";
 
 beforeEach(() => {
     vi.restoreAllMocks();
