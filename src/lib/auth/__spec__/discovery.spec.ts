@@ -15,7 +15,7 @@ import {
     _resetAuthInfoCacheForTests,
     getAuthInfo,
     getCentralisedOAuthConfig,
-} from "./discovery";
+} from "../discovery";
 
 const FAKE_OAUTH = {
     issuer_url: "https://acme.example.com",
