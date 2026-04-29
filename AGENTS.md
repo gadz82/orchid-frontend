@@ -24,8 +24,7 @@ src/
 │   ├── actions/
 │   │   ├── chats.ts          # Multi-chat CRUD + messaging (PRIMARY)
 │   │   ├── mcp-auth.ts       # MCP per-server OAuth: list, authorize, revoke
-│   │   ├── chat.ts           # Legacy single-shot (DEPRECATED)
-│   │   └── upload.ts         # Standalone upload (DEPRECATED)
+│   │   └── stream.ts         # SSE streaming Server Action
 │   ├── chat/page.tsx         # Protected chat page
 │   ├── login/page.tsx        # OAuth login button
 │   ├── layout.tsx            # Root layout

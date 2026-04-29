@@ -44,14 +44,17 @@ export async function createChat(title?: string): Promise<ChatSession | null> {
         });
         if (res.status === 401) await handleUnauthorized();
         if (!res.ok) {
-            const text = await res.text();
-            console.error("[createChat] failed:", res.status, text);
+            // Log status only — never the response body. Upstream error
+            // payloads can carry stack traces, tokens, or PII the
+            // frontend has no business persisting to its console.
+            console.error("[createChat] failed: status=%d", res.status);
             return null;
         }
         return await res.json();
     } catch (err) {
         unstable_rethrow(err);
-        console.error("[createChat] error:", err);
+        const kind = err instanceof Error ? err.name : "unknown";
+        console.error("[createChat] error: %s", kind);
         return null;
     }
 }

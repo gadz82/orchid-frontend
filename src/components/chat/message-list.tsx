@@ -1,6 +1,6 @@
 "use client";
 
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useRef, useState, type ReactElement} from "react";
 import {MessageBubble, type Message} from "./message-bubble";
 import {LoadingIndicator} from "./loading-indicator";
 import {OrchidIcon} from "@/components/icons/orchid-icon";
@@ -11,12 +11,36 @@ interface MessageListProps {
     isLoading: boolean;
 }
 
+/** Internal grouping shape produced by :func:`groupMessages`. */
+interface MessageGroup {
+    type: GroupType;
+    items: Message[];
+}
+
+/**
+ * Renderer registry — adding a new visual treatment for a message type
+ * (e.g. ``"tool-call"`` cards, code-block copy-buttons) is a registry
+ * entry, not a switch-statement edit. ``register`` keeps the door open
+ * for future renderers without touching the loop in :func:`MessageList`.
+ */
+type GroupType = "bubble" | "system-group";
+type GroupRenderer = (group: MessageGroup, index: number) => ReactElement;
+
+const GROUP_RENDERERS: Record<GroupType, GroupRenderer> = {
+    bubble: (group) => <MessageBubble key={group.items[0].id} message={group.items[0]}/>,
+    "system-group": (group, i) => <SystemMessageGroup key={`sys-${i}`} messages={group.items}/>,
+};
+
+export function registerGroupRenderer(type: GroupType, renderer: GroupRenderer): void {
+    GROUP_RENDERERS[type] = renderer;
+}
+
 /**
  * Groups consecutive items by a key function.
- * Returns an array of {type: "single"|"group", items: Message[]}.
+ * Returns an array of {type, items} buckets the renderer registry knows how to render.
  */
-function groupMessages(messages: Message[]) {
-    const result: Array<{ type: "bubble" | "system-group"; items: Message[] }> = [];
+function groupMessages(messages: Message[]): MessageGroup[] {
+    const result: MessageGroup[] = [];
     let systemBuffer: Message[] = [];
 
     const flushSystem = () => {
@@ -103,13 +127,7 @@ export function MessageList({messages, isLoading}: MessageListProps) {
                 </div>
             )}
 
-            {groups.map((group, i) =>
-                group.type === "system-group" ? (
-                    <SystemMessageGroup key={`sys-${i}`} messages={group.items}/>
-                ) : (
-                    <MessageBubble key={group.items[0].id} message={group.items[0]}/>
-                ),
-            )}
+            {groups.map((group, i) => GROUP_RENDERERS[group.type](group, i))}
 
             {isLoading && <LoadingIndicator/>}
 
