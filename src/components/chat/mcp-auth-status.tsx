@@ -1,6 +1,6 @@
 "use client";
 
-import {useState, useEffect, useCallback} from "react";
+import {useCallback, useState} from "react";
 import {
     Shield,
     CheckCircle,
@@ -11,117 +11,33 @@ import {
     ChevronUp,
     X,
 } from "lucide-react";
-import {
-    listMCPAuthServers,
-    getMCPAuthorizeUrl,
-    revokeMCPToken,
-} from "@/app/actions/mcp-auth";
-import type {MCPServerAuthStatus} from "@/app/actions/mcp-auth";
+
+import {useMCPAuthFlow} from "@/hooks/use-mcp-auth-flow";
+import {useMCPAuthHighlight} from "@/hooks/use-mcp-auth-highlight";
+import {useMCPAuthServers} from "@/hooks/use-mcp-auth-servers";
 
 /**
  * MCP OAuth server authorization status panel.
  *
  * Renders in the chat header.  Self-hides when no OAuth servers are
- * configured.  Handles the popup-based OAuth flow with ``postMessage``
- * for completion.
+ * configured.  Composes three hooks that own the underlying state:
  *
- * Reacts to two events:
- *   - ``window`` "message" with ``type: "mcp-auth-complete"`` — popup
- *     signals a successful token exchange; the list is refreshed.
- *   - ``window`` "mcp-auth-needed" CustomEvent with ``detail.servers:
- *     string[]`` — the chat stream reports that the current turn hit
- *     unauthorized servers; the panel auto-expands and pulses the named
- *     rows so the user notices.
- *
- * When "Connect" fails (typically a YAML misconfiguration — ``auth.mode:
- * oauth`` with no ``authorization_endpoint`` or ``issuer``), the error
- * is shown inline instead of silently doing nothing.
+ *   - :func:`useMCPAuthServers` — server list + refresh.
+ *   - :func:`useMCPAuthHighlight` — popup completion + auth-needed
+ *     highlight pulse via window events.
+ *   - :func:`useMCPAuthFlow` — connect / disconnect actions and the
+ *     inline error surfaced when authorize-URL fetch fails.
  */
 export function MCPAuthStatus() {
-    const [servers, setServers] = useState<MCPServerAuthStatus[]>([]);
     const [expanded, setExpanded] = useState(false);
-    const [loading, setLoading] = useState<string | null>(null);
-    const [connectError, setConnectError] = useState<{server: string; message: string} | null>(null);
-    const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
+    const {servers, refresh} = useMCPAuthServers();
+    const {loading, connectError, setConnectError, connect, disconnect} = useMCPAuthFlow({
+        refresh,
+        onConnectError: () => setExpanded(true),
+    });
+    const onAuthComplete = useCallback(() => setConnectError(null), [setConnectError]);
+    const {highlighted} = useMCPAuthHighlight({refresh, setExpanded, onAuthComplete});
 
-    const refresh = useCallback(async () => {
-        const data = await listMCPAuthServers();
-        setServers(data);
-    }, []);
-
-    // Load on mount.  The setState is guarded behind ``await`` (so it
-    // isn't synchronous with the effect body — satisfies the React 19
-    // ``react-hooks/set-state-in-effect`` rule) and by a ``cancelled``
-    // flag so a late response can't write to an unmounted component.
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            const data = await listMCPAuthServers();
-            if (!cancelled) setServers(data);
-        })();
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    // Listen for postMessage from OAuth popup
-    useEffect(() => {
-        const handler = (event: MessageEvent) => {
-            if (event.data?.type === "mcp-auth-complete") {
-                setConnectError(null);
-                refresh();
-            }
-        };
-        window.addEventListener("message", handler);
-        return () => window.removeEventListener("message", handler);
-    }, [refresh]);
-
-    // Listen for ``mcp-auth-needed`` dispatched by the chat stream when
-    // the latest turn hit unauthorised MCP servers.  We auto-expand the
-    // panel and temporarily highlight the affected rows so the user
-    // doesn't have to hunt for the small header chip.
-    useEffect(() => {
-        const handler = (e: Event) => {
-            const detail = (e as CustomEvent<{servers?: string[]}>).detail;
-            const names = detail?.servers?.filter(Boolean) ?? [];
-            if (names.length === 0) return;
-            setExpanded(true);
-            setHighlighted(new Set(names));
-            refresh();
-        };
-        window.addEventListener("mcp-auth-needed", handler as EventListener);
-        return () => window.removeEventListener("mcp-auth-needed", handler as EventListener);
-    }, [refresh]);
-
-    // Fade the highlight after a short window so the pulse doesn't
-    // linger forever once the user has seen it.
-    useEffect(() => {
-        if (highlighted.size === 0) return;
-        const t = setTimeout(() => setHighlighted(new Set()), 6000);
-        return () => clearTimeout(t);
-    }, [highlighted]);
-
-    const handleConnect = useCallback(async (serverName: string) => {
-        setLoading(serverName);
-        setConnectError(null);
-        const result = await getMCPAuthorizeUrl(serverName);
-        setLoading(null);
-        if (result.kind === "ok") {
-            window.open(result.url, `mcp-auth-${serverName}`, "width=600,height=700,popup=yes");
-        } else {
-            setConnectError({server: serverName, message: result.message});
-            setExpanded(true);
-        }
-    }, []);
-
-    const handleDisconnect = useCallback(async (serverName: string) => {
-        setLoading(serverName);
-        await revokeMCPToken(serverName);
-        await refresh();
-        setLoading(null);
-    }, [refresh]);
-
-    // Don't render if no OAuth servers configured
     if (servers.length === 0) return null;
 
     const unauthorizedCount = servers.filter((s) => !s.authorized).length;
@@ -215,7 +131,7 @@ export function MCPAuthStatus() {
                                     </div>
                                     {server.authorized ? (
                                         <button
-                                            onClick={() => handleDisconnect(server.server_name)}
+                                            onClick={() => disconnect(server.server_name)}
                                             disabled={loading === server.server_name}
                                             className="flex items-center gap-1 rounded px-2 py-1 text-[10px]
                                                 text-orchid-muted transition-colors hover:bg-orchid-card
@@ -225,7 +141,7 @@ export function MCPAuthStatus() {
                                         </button>
                                     ) : (
                                         <button
-                                            onClick={() => handleConnect(server.server_name)}
+                                            onClick={() => connect(server.server_name)}
                                             disabled={loading === server.server_name}
                                             className="flex items-center gap-1 rounded bg-orchid-accent/20 px-2 py-1
                                                 text-[10px] font-medium text-orchid-accent transition-colors

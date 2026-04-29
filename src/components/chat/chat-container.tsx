@@ -1,7 +1,7 @@
 "use client";
 
-import {useState, useCallback, useEffect} from "react";
-import {useSession, signOut} from "next-auth/react";
+import {useEffect, useState} from "react";
+import {useSession} from "next-auth/react";
 import {useRouter} from "next/navigation";
 import {Upload} from "lucide-react";
 
@@ -9,29 +9,31 @@ import {MessageList} from "./message-list";
 import {ChatInput} from "./chat-input";
 import {ChatSidebar} from "./chat-sidebar";
 import {ChatHeader} from "./chat-header";
-import type {Message} from "./message-bubble";
-import {loadMessages} from "@/app/actions/chats";
-import {useChatStream} from "@/hooks/use-chat-stream";
-import {useDragDrop} from "@/hooks/use-drag-drop";
 import {useChatList} from "@/hooks/use-chat-list";
+import {useDragDrop} from "@/hooks/use-drag-drop";
+import {useMessageHistory} from "@/hooks/use-message-history";
+import {useMessageSender} from "@/hooks/use-message-sender";
 
 /**
  * Main chat container — multi-chat with sidebar and persistent history.
  *
- * Chat list state is shared with ChatSidebar via ChatListContext (useChatList).
- * Delegates drag-and-drop to useDragDrop, streaming to useChatStream,
- * and the header to ChatHeader.
+ * Composition root for three hooks:
+ *   - :func:`useChatList` — chat CRUD + active selection (shared with sidebar).
+ *   - :func:`useMessageHistory` — per-chat message state + load on switch.
+ *   - :func:`useMessageSender` — streaming send flow + upload spinner.
+ *
+ * Drag-and-drop and the OAuth redirect both live in dedicated hooks so
+ * this component stays focused on layout.
  */
 export function ChatContainer() {
     const {status} = useSession();
     const router = useRouter();
-    const {activeChatId, setActiveChatId, chats, loading: chatsLoading, handleCreateChat} = useChatList();
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const {activeChatId, setActiveChatId, chats, loading: chatsLoading, handleCreateChat} =
+        useChatList();
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const [historyLoading, setHistoryLoading] = useState(false);
-    const [uploading, setUploading] = useState(false);
 
+    const {messages, setMessages, historyLoading} = useMessageHistory(activeChatId);
+    const {handleSend, isLoading, uploading} = useMessageSender({activeChatId, setMessages});
     const {dragOver, droppedFiles, setDroppedFiles, dragHandlers} = useDragDrop({
         disabled: !activeChatId || uploading,
     });
@@ -52,154 +54,6 @@ export function ChatContainer() {
             handleCreateChat();
         }
     }, [chatsLoading, chats, activeChatId, setActiveChatId, handleCreateChat]);
-
-    // Load messages when active chat changes
-    useEffect(() => {
-        if (!activeChatId) return;
-        const load = async () => {
-            setHistoryLoading(true);
-            const history = await loadMessages(activeChatId);
-            const msgs: Message[] = history.map((m) => ({
-                id: m.id,
-                role: m.role as "user" | "assistant",
-                content: m.content,
-                agentsUsed: m.agents_used,
-                timestamp: new Date(m.created_at),
-            }));
-            setMessages(msgs);
-            setHistoryLoading(false);
-        };
-        load();
-    }, [activeChatId]);
-
-    const {streamMessage} = useChatStream();
-
-    const handleSend = useCallback(
-        async (text: string, files: File[]) => {
-            if (!activeChatId) return;
-
-            const fileNames = files.map((f) => f.name);
-            const displayContent =
-                fileNames.length > 0
-                    ? `${text}\n\n_Attached: ${fileNames.join(", ")}_`
-                    : text;
-
-            const userMsg: Message = {
-                id: crypto.randomUUID(),
-                role: "user",
-                content: displayContent,
-                timestamp: new Date(),
-            };
-            setMessages((prev) => [...prev, userMsg]);
-            setIsLoading(true);
-            if (files.length > 0) setUploading(true);
-
-            const assistantId = crypto.randomUUID();
-            const assistantMsg: Message = {
-                id: assistantId,
-                role: "assistant",
-                content: "",
-                timestamp: new Date(),
-            };
-            setMessages((prev) => [...prev, assistantMsg]);
-
-            try {
-                await streamMessage(
-                    activeChatId,
-                    text,
-                    files.length > 0 ? files : null,
-                    {
-                        onToken: (token) => {
-                            setMessages((prev) =>
-                                prev.map((m) =>
-                                    m.id === assistantId
-                                        ? {...m, content: m.content + token}
-                                        : m,
-                                ),
-                            );
-                        },
-                        onStatus: (agent, agentStatus, preview) => {
-                            let content: string;
-                            if (agentStatus === "started") {
-                                content = `${agent} agent activated`;
-                            } else if (agentStatus === "done" && preview) {
-                                const short = preview.length > 150 ? preview.slice(0, 150) + "\u2026" : preview;
-                                content = `${agent}: ${short}`;
-                            } else {
-                                return;
-                            }
-                            const statusMsg: Message = {
-                                id: crypto.randomUUID(),
-                                role: "system",
-                                content,
-                                timestamp: new Date(),
-                            };
-                            setMessages((prev) => {
-                                const last = prev[prev.length - 1];
-                                return [...prev.slice(0, -1), statusMsg, last];
-                            });
-                        },
-                        onAgentResult: () => {},
-                        onHandoff: (content) => {
-                            const handoffMsg: Message = {
-                                id: crypto.randomUUID(),
-                                role: "system",
-                                content,
-                                timestamp: new Date(),
-                            };
-                            setMessages((prev) => {
-                                const last = prev[prev.length - 1];
-                                return [...prev.slice(0, -1), handoffMsg, last];
-                            });
-                        },
-                        onDone: (response, agentsUsed, authRequired) => {
-                            setMessages((prev) =>
-                                prev.map((m) =>
-                                    m.id === assistantId
-                                        ? {...m, content: response || m.content, agentsUsed}
-                                        : m,
-                                ),
-                            );
-                            // Surface unauthorised MCP servers to the
-                            // header chip so it auto-expands and pulses.
-                            if (authRequired && authRequired.length > 0) {
-                                window.dispatchEvent(
-                                    new CustomEvent("mcp-auth-needed", {
-                                        detail: {servers: authRequired},
-                                    }),
-                                );
-                            }
-                        },
-                        onError: (error) => {
-                            if (error.includes("Not authenticated")) {
-                                signOut({callbackUrl: "/login"});
-                                return;
-                            }
-                            setMessages((prev) =>
-                                prev.map((m) =>
-                                    m.id === assistantId
-                                        ? {...m, content: m.content || `Error: ${error}`}
-                                        : m,
-                                ),
-                            );
-                        },
-                    },
-                );
-            } catch {
-                setMessages((prev) =>
-                    prev.map((m) =>
-                        m.id === assistantId
-                            ? {...m, content: m.content || "Sorry, something went wrong. Please try again."}
-                            : m,
-                    ),
-                );
-            } finally {
-                setIsLoading(false);
-                setUploading(false);
-            }
-        },
-        [activeChatId, streamMessage],
-    );
 
     if (status === "loading") {
         return (

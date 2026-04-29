@@ -15,6 +15,23 @@ interface ChatInputProps {
 import {ACCEPTED_INPUT_STRING as ACCEPTED} from "@/lib/constants";
 
 /**
+ * Key used to identify a staged file across renders.
+ *
+ * The browser's ``File`` object has no stable identity after construction,
+ * but the triple ``(name, size, lastModified)`` is unique enough in
+ * practice — two files with identical metadata being staged at the
+ * same instant is unrealistic. Falling back to ``index`` only when one
+ * of those fields is missing keeps the rare degenerate case from
+ * crashing React's reconciler.
+ */
+function fileKey(file: File, index: number): string {
+    if (file.name && Number.isFinite(file.size) && Number.isFinite(file.lastModified)) {
+        return `${file.name}::${file.size}::${file.lastModified}`;
+    }
+    return `idx-${index}`;
+}
+
+/**
  * Chat input with auto-resize textarea, send button, and file attachment.
  *
  * Files are staged locally until the user submits a message.
@@ -94,7 +111,7 @@ export function ChatInput({
                 <div className="mb-2 flex flex-wrap gap-2">
                     {pendingFiles.map((file, i) => (
                         <div
-                            key={`${file.name}-${i}`}
+                            key={fileKey(file, i)}
                             className="flex items-center gap-1.5 rounded-lg border border-orchid-border bg-orchid-card px-2.5 py-1.5 text-xs text-orchid-text"
                         >
                             <FileText className="h-3.5 w-3.5 text-orchid-muted"/>
