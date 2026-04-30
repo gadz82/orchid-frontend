@@ -1,0 +1,42 @@
+# Dockerfile.dev — local-source development build for orchid-frontend.
+#
+# Unlike Dockerfile (multi-stage production build with the standalone
+# Next.js output), this variant only installs node_modules and runs
+# `next dev --turbopack`.  The compose file mounts the host source over
+# /app so live edits trigger Turbopack's hot reload without an image
+# rebuild.
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies once — Turbopack reads node_modules at request
+# time, so a missing /app/node_modules on first start makes `next dev`
+# crash.  We `npm ci` here so the image carries the resolved tree
+# with Linux-musl native binaries (e.g. ``@next/swc-linux-arm64-musl``).
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
+
+# Stash the freshly-installed deps OUTSIDE /app so the compose bind
+# mount (``./orchid-frontend:/app``) can't hide them.  Without this,
+# Docker initialises the ``orchid_frontend_node_modules`` named volume
+# from /app/node_modules AFTER the bind mount is applied — i.e. from
+# the host's node_modules, which on macOS contains arm64-darwin
+# binaries that won't run in Alpine.  The CMD restores them at
+# runtime when the volume is fresh or stale.
+RUN mv /app/node_modules /opt/cached_node_modules
+
+ENV NODE_ENV=development
+ENV PORT=3000
+EXPOSE 3000
+
+# Source files are bind-mounted from the host at runtime — no COPY
+# here means a host edit doesn't require rebuilding the image.
+#
+# Container start (idempotent):
+#   1. If /app/node_modules is missing the sentinel file, populate
+#      it from /opt/cached_node_modules (the image's clean Linux
+#      tree).  The sentinel skips re-copy on restart so the named
+#      volume keeps things hot across container restarts.
+#   2. exec ``npm run dev`` (Turbopack with hot reload).
+CMD ["sh", "-c", "if [ ! -f /app/node_modules/.deps-installed ]; then echo '[Dockerfile.dev] populating /app/node_modules from image cache (one-time per volume)'; rm -rf /app/node_modules/* /app/node_modules/.[!.]* 2>/dev/null || true; cp -a /opt/cached_node_modules/. /app/node_modules/ && touch /app/node_modules/.deps-installed; fi; exec npm run dev"]
