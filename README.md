@@ -8,7 +8,7 @@ Next.js 15 multi-chat web UI for the Orchid AI agent framework.
 
 Provides a chat interface with persistent sidebar, file upload (drag-and-drop + paperclip), Markdown rendering, generic OAuth2/OIDC authentication, real-time SSE streaming with mini-agent visualisation, and human-in-the-loop tool approval.
 
-**Runtime dependency:** This project requires [orchid-api](../orchid-api/) as its backend server. All communication happens over HTTP — there is no direct dependency on the `orchid` Python library, only on the REST endpoints that orchid-api exposes. Make sure orchid-api is running and reachable at the URL configured in `NEXT_PUBLIC_API_URL`.
+**Runtime dependency:** This project requires [orchid-api](https://github.com/gadz82/orchid-api) as its backend server. All communication happens over HTTP — there is no direct dependency on the `orchid` Python library, only on the REST endpoints that orchid-api exposes. Make sure orchid-api is running and reachable at the URL configured in `NEXT_PUBLIC_API_URL`.
 
 ## Features
 
