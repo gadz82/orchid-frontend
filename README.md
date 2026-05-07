@@ -19,6 +19,8 @@ Provides a chat interface with persistent sidebar, file upload (drag-and-drop + 
 - **MCP per-server OAuth panel** — for upstream MCP servers running in `oauth` mode, the user authorises each server in-app via the embedded auth status pane.
 - **Generic OAuth2 / OIDC login** — auto-discovery from a single `OAUTH_ISSUER` env var, or explicit endpoints when discovery isn't available. Bearer token never reaches the browser — Server Actions proxy every API call.
 - **Markdown rendering** with `react-markdown` + `@tailwindcss/typography`, including code blocks, tables, and inline formatting.
+- **Bloom panel** (`/bloom`) — operator UI for the Pollen + Bloom event subsystem: list/inspect signals, runs, declared triggers, and schedules; live SSE stream of `bloom.run.*` events for any run. Visibility is enforced upstream; non-owner / cross-tenant requests return 404 (never 403) — the panel surfaces the upstream contract verbatim.
+- **In-chat Bloom progress** — chat-bound Blooms (triggered with `respect_chat_binding: true`) render a live progress card anchored under the user message that produced the binding. Powered by the upstream `chat.bloom.{attached,tick,finished}` SSE channel; finalised messages flow through chat-reload, the live card just shows progress.
 - **Theming** — Tailwind CSS v4 with CSS-based `@theme inline` tokens. Re-skin by editing `globals.css` only.
 
 ## Stack
@@ -55,25 +57,52 @@ src/
     actions/
       chats.ts                 Multi-chat CRUD + messaging (Server Actions)
       mcp-auth.ts              MCP per-server OAuth bookkeeping
-      streaming.ts             SSE proxy for /chats/{id}/stream
+      stream.ts                SSE proxy for /chats/{id}/stream
+      bloom-runs.ts            Bloom — list/get/cancel/retry runs
+      bloom-signals.ts         Pollen — list/get/replay signals
+      bloom-triggers.ts        Trigger registry inspection
+      bloom-schedules.ts       Schedule list/toggle
     chat/page.tsx              Protected chat page
+    bloom/                     Bloom operator panel (Activity / Signals / Triggers / Schedules)
+      layout.tsx                 Shell: header + left rail nav
+      page.tsx                   Default landing — runs list with status filter
+      runs/[runId]/page.tsx      Run detail + live SSE stream pane
+      signals/page.tsx           Signals list
+      signals/[signalId]/page.tsx Signal detail
+      triggers/page.tsx          Trigger registry
+      triggers/[triggerId]/page.tsx Trigger detail with recent runs
+      schedules/page.tsx         Schedules list
+    api/
+      auth/[...nextauth]/      NextAuth route handler
+      bloom/stream/[runId]/    SSE proxy for /runs/{runId}/stream
+      chat-events/[chatId]/    SSE proxy for /chats/{chatId}/events/stream
     login/page.tsx             OAuth login page
     layout.tsx                 Root layout
-    api/auth/[...nextauth]/    NextAuth route handler
   components/chat/
     chat-container.tsx         Main layout: sidebar + chat + drag-drop + MCP auth
     mcp-auth-status.tsx        MCP OAuth server authorization status panel
     chat-sidebar.tsx           Chat list with new/delete/share actions
     chat-input.tsx             Message input with file attachment
     message-bubble.tsx         User/assistant bubbles with Markdown rendering
-    message-list.tsx           Scrollable message list
+    message-list.tsx           Scrollable message list (renders inline Bloom cards)
     mini-agent-trace.tsx       Per-mini-agent lifecycle marker rendering
     hitl-approval-card.tsx     Approve / deny prompt for paused tool calls
+    inline-bloom-progress.tsx  Per-run Bloom progress card anchored under user msg
+    bloom-activity-pill.tsx    Collapse view when ≥2 Blooms active in the chat
     loading-indicator.tsx      Typing indicator dots
+  components/bloom/
+    run-list.tsx, run-detail.tsx, run-stream-pane.tsx
+    signal-list.tsx, schedule-list.tsx, trigger-list.tsx
+    status-pill.tsx, relative-time.tsx
+  hooks/
+    use-chat-stream.ts         Per-message SSE subscription
+    use-chat-events.ts         Long-lived chat-channel Bloom-progress subscription
+    use-bloom.ts               Polling list hooks for runs / signals / triggers / schedules
+    use-bloom-run-stream.ts    Per-run SSE subscription
   lib/auth/
     auth.ts                    NextAuth configuration
     oauth-provider.ts          Generic OAuth2/OIDC provider
-  middleware.ts                Auth guard for /chat route
+  middleware.ts                Auth guard for /chat AND /bloom routes
 ```
 
 The data flow on every message send:
@@ -166,6 +195,67 @@ When the user sends a message, the frontend opens an SSE stream to orchid-api an
 - `assistant.complete` — finalises the bubble and re-enables the input.
 
 The trace pane is purely cosmetic — collapsing or hiding it doesn't change the underlying graph behaviour.
+
+## Pollen + Bloom — operator panel + in-chat progress
+
+The frontend exposes two complementary surfaces for the upstream Pollen + Bloom event subsystem (see [orchid-api Pollen + Bloom](https://github.com/gadz82/orchid-api#pollen--bloom--events-surface) for the underlying endpoints).
+
+### Operator panel — `/bloom`
+
+Four read-mostly views, polling by default and optionally streaming SSE for run detail. The middleware extends the auth guard from `/chat` to `/bloom`.
+
+| Route | Purpose |
+|---|---|
+| `/bloom` | Recent `JobRun`s with a status filter persisted in the URL (deep-linkable). Default landing |
+| `/bloom/runs/[runId]` | Run detail + live `bloom.run.*` SSE stream pane (`bloom.run.queued`, `bloom.run.started`, `bloom.run.finished`, plus tool / agent ticks) |
+| `/bloom/signals` + `/bloom/signals/[signalId]` | Recent signals + envelope detail |
+| `/bloom/triggers` + `/bloom/triggers/[triggerId]` | Trigger registry + per-trigger run history |
+| `/bloom/schedules` | Schedules list with `last_fire_at` / `next_fire_at` |
+
+All views talk to upstream via Server Actions (`app/actions/bloom-*.ts`) so the bearer token never reaches the browser. The per-run SSE stream goes through `/api/bloom/stream/[runId]` because `EventSource` cannot send a custom `Authorization` header — the Next.js route resolves the NextAuth bearer server-side and proxies to `orchid-api`. Visibility (§26) is enforced upstream; non-owner / cross-tenant requests surface as 404 (never 403).
+
+#### Server actions
+
+**`app/actions/bloom-runs.ts`:**
+
+| Function | Method | Endpoint |
+|---|---|---|
+| `listRuns({status, triggerId, since, limit})` | GET | `/runs` |
+| `getRun(runId)` | GET | `/runs/{id}` |
+| `cancelRun(runId)` | POST | `/runs/{id}/cancel` |
+| `retryRun(runId)` | POST | `/runs/{id}/retry` |
+| `listRunsForTrigger(triggerId, ...)` | GET | `/jobs/{triggerId}/runs` |
+
+**`app/actions/bloom-signals.ts`:** `listSignals`, `getSignal`, `replaySignal` → `/signals`, `/signals/{id}`, `/signals/{id}/replay`.
+
+**`app/actions/bloom-triggers.ts`:** `listTriggers`, `getTrigger` → `/jobs`, `/jobs/{triggerId}/runs`.
+
+**`app/actions/bloom-schedules.ts`:** `listSchedules`, `getSchedule`, `setScheduleEnabled` → `/schedules`, `/schedules/{id}`, `PATCH /schedules/{id}`.
+
+### In-chat Bloom progress
+
+Inside `/chat`, when an emitted signal carries a `ChatBinding` AND its matching trigger has `respect_chat_binding: true`, the resulting Bloom run posts back into the originating chat. The frontend renders **live progress** for those runs as the upstream chat-channel SSE arrives:
+
+```
+api/chat-events/[chatId]/route.ts        SSE proxy → GET /chats/{chatId}/events/stream
+hooks/use-chat-events.ts                 EventSource sub, Map<run_id, BloomProgressState>
+components/chat/inline-bloom-progress    Per-run card anchored under the user message
+components/chat/bloom-activity-pill      Collapse view when ≥2 cards are active
+```
+
+Three event types arrive on the wire (defined upstream as `ChatBloomEvent.type`):
+
+| Event | What the UI does |
+|---|---|
+| `chat.bloom.attached` | Adds (or refreshes) a row keyed by `run_id`. Fires for both `queued` + `started` collapse; the second arrival is a no-op. |
+| `chat.bloom.tick` | Appends to the run's redacted `ticks` buffer (FIFO-capped at 50). Card shows the most recent 5 with a "show all" expansion. |
+| `chat.bloom.finished` | Flips status to `finished` / `failed`; schedules a 2 s grace deletion so the fade-out animation plays. The final `AIMessage` flows in through chat reload, NOT this event. |
+
+**Anchor logic.** The card renders inline under the message that produced the binding when `source_message_id` is set (auto-populated by `OrchidAgent.emit_signal(chat_id="self", ...)` on the agent's current chat turn). Cross-chat emissions have no anchor and render in a bottom-dock fallback that collapses behind a `<BloomActivityPill>` after the second concurrent run.
+
+**Cancel button.** Visible only on `act_as_user` runs — for `addressed_to_user` runs the chat owner is the addressed user, not the operator who could meaningfully cancel.
+
+**Reconnect.** `EventSource` auto-reconnects on transient errors (browser default); the hook also reconnects explicitly after a manual `chat-stream` reload so progress cards survive page navigations within `/chat`.
 
 ## File Upload
 
