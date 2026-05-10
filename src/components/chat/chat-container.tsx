@@ -11,7 +11,9 @@ import {ChatSidebar} from "./chat-sidebar";
 import {ChatHeader} from "./chat-header";
 import type {Message} from "./message-bubble";
 import {loadMessages} from "@/app/actions/chats";
+import {cancelRun} from "@/app/actions/bloom-runs";
 import {useChatStream} from "@/hooks/use-chat-stream";
+import {useChatEvents} from "@/hooks/use-chat-events";
 import {useDragDrop} from "@/hooks/use-drag-drop";
 import {useChatList} from "@/hooks/use-chat-list";
 
@@ -73,6 +75,19 @@ export function ChatContainer() {
     }, [activeChatId]);
 
     const {streamMessage} = useChatStream();
+
+    // Phase F2.5 — long-lived chat-events SSE subscription that
+    // surfaces in-flight Bloom progress as inline cards under the
+    // originating message.  The two streams are independent:
+    // ``useChatStream`` is per-request, ``useChatEvents`` is
+    // per-chat-session and reconnects on its own.
+    const {blooms: bloomProgress} = useChatEvents(activeChatId);
+    const handleCancelBloom = useCallback(
+        async (runId: string) => {
+            await cancelRun(runId);
+        },
+        [],
+    );
 
     const handleSend = useCallback(
         async (text: string, files: File[]) => {
@@ -238,7 +253,12 @@ export function ChatContainer() {
                         <p className="text-sm text-orchid-muted">Loading history...</p>
                     </div>
                 ) : (
-                    <MessageList messages={messages} isLoading={isLoading} />
+                    <MessageList
+                        messages={messages}
+                        isLoading={isLoading}
+                        blooms={bloomProgress}
+                        onCancelBloom={handleCancelBloom}
+                    />
                 )}
 
                 <ChatInput
