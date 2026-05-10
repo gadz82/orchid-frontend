@@ -1,4 +1,5 @@
-import {User} from "lucide-react";
+import {Sparkles, User} from "lucide-react";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {OrchidIcon} from "@/components/icons/orchid-icon";
@@ -9,6 +10,13 @@ export interface Message {
     content: string;
     agentsUsed?: string[];
     timestamp: Date;
+    /**
+     * Backend-supplied metadata (§25.5).  When ``metadata.origin``
+     * is ``"bloom"`` the bubble is decorated with a sparkles badge
+     * + tooltip + link to the originating run, distinguishing
+     * Bloom-originated messages from real-time turns.
+     */
+    metadata?: Record<string, unknown> | null;
 }
 
 interface MessageBubbleProps {
@@ -21,6 +29,7 @@ interface MessageBubbleProps {
  */
 export function MessageBubble({message}: MessageBubbleProps) {
     const isUser = message.role === "user";
+    const bloom = readBloomMetadata(message.metadata);
 
     return (
         <div
@@ -56,6 +65,36 @@ export function MessageBubble({message}: MessageBubbleProps) {
                     </div>
                 )}
 
+                {/* Bloom-origin badge (§25.6) */}
+                {bloom !== null && (
+                    <div
+                        className="mt-2 flex items-center gap-1.5 rounded-md bg-orchid-accent/10 px-2 py-1 text-[11px] text-orchid-accent-glow"
+                        title={
+                            bloom.deliveredAt !== null
+                                ? `From background work · run ${bloom.runId} · delivered ${bloom.deliveredAt}`
+                                : `From background work · run ${bloom.runId}`
+                        }
+                        aria-label="Bloom-originated message"
+                    >
+                        <Sparkles className="h-3 w-3" />
+                        <span>
+                            From background work
+                            {bloom.triggerId !== null && (
+                                <>
+                                    {" · "}trigger {bloom.triggerId}
+                                </>
+                            )}
+                            {" · "}
+                            <Link
+                                href={`/bloom/runs/${bloom.runId}`}
+                                className="underline"
+                            >
+                                view run
+                            </Link>
+                        </span>
+                    </div>
+                )}
+
                 {/* Agent badges */}
                 {message.agentsUsed && message.agentsUsed.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
@@ -81,4 +120,37 @@ export function MessageBubble({message}: MessageBubbleProps) {
             </div>
         </div>
     );
+}
+
+/* ── Bloom-origin metadata extractor (§25.5) ───────────────── */
+
+interface BloomMetadata {
+    runId: string;
+    triggerId: string | null;
+    deliveredAt: string | null;
+    failed: boolean;
+}
+
+/**
+ * Detect a Bloom-originated message and project the parts the badge
+ * needs out of the metadata bag.  Returns ``null`` for normal
+ * (real-time) messages so the badge isn't rendered.
+ */
+export function readBloomMetadata(
+    metadata: Record<string, unknown> | null | undefined,
+): BloomMetadata | null {
+    if (metadata === null || metadata === undefined) return null;
+    if (metadata.origin !== "bloom") return null;
+    const runId = typeof metadata.bloom_run_id === "string" ? metadata.bloom_run_id : null;
+    if (runId === null || runId === "") return null;
+    return {
+        runId,
+        triggerId:
+            typeof metadata.trigger_id === "string" ? metadata.trigger_id : null,
+        deliveredAt:
+            typeof metadata.delivered_at === "string"
+                ? metadata.delivered_at
+                : null,
+        failed: metadata.status === "failed",
+    };
 }

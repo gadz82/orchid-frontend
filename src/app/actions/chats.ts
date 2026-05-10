@@ -20,6 +20,15 @@ export interface ChatMessageOut {
     content: string;
     agents_used: string[];
     created_at: string;
+    /**
+     * Optional metadata block shipped by the backend (§25.5 of the
+     * Pollen + Bloom spec).  When the backend writes a Bloom-
+     * originated message it sets ``metadata.origin = "bloom"`` plus
+     * ``bloom_run_id`` / ``trigger_id`` / ``signal_id`` so the
+     * frontend can render the row with a distinct visual marker
+     * linking back to ``/bloom/runs/{id}``.
+     */
+    metadata?: Record<string, unknown> | null;
 }
 
 export interface ChatResult {
