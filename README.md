@@ -344,6 +344,10 @@ npm run lint      # ESLint
 - **SSE streams need `cache: 'no-store'`** — already set in `streaming.ts`; if you write custom Server Actions for streaming, mirror it.
 - **`NEXTAUTH_SECRET` must be the same across replicas** — different secrets invalidate each other's JWTs.
 
+## Related Projects
+
+- **[orchid-examples](https://github.com/gadz82/orchid-examples)** — Example configurations, custom agents, and integration patterns
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
