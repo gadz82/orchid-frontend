@@ -1,6 +1,7 @@
 import {describe, expect, it} from "vitest";
+import {render} from "@testing-library/react";
 
-import {readBloomMetadata} from "./message-bubble";
+import {readBloomMetadata, MessageBubble} from "./message-bubble";
 
 describe("readBloomMetadata", () => {
     it("returns null for missing metadata", () => {
@@ -42,5 +43,29 @@ describe("readBloomMetadata", () => {
             status: "failed",
         });
         expect(got?.failed).toBe(true);
+    });
+});
+
+describe("MessageBubble cancelled badge", () => {
+    it("renders cancelled badge when message is cancelled", () => {
+        const {getByText} = render(<MessageBubble message={{
+            id: "test-id",
+            role: "assistant",
+            content: "Test response",
+            timestamp: new Date(),
+            cancelled: true
+        }} />);
+        expect(getByText("cancelled")).toBeTruthy();
+    });
+    
+    it("does not render cancelled badge when message is not cancelled", () => {
+        const {queryByText} = render(<MessageBubble message={{
+            id: "test-id",
+            role: "assistant",
+            content: "Test response",
+            timestamp: new Date(),
+            cancelled: false
+        }} />);
+        expect(queryByText("cancelled")).toBeNull();
     });
 });

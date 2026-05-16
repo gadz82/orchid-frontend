@@ -66,6 +66,7 @@ export function ChatContainer() {
                 role: m.role as "user" | "assistant",
                 content: m.content,
                 agentsUsed: m.agents_used,
+                cancelled: (m.metadata?.cancelled as boolean) ?? false,
                 timestamp: new Date(m.created_at),
             }));
             setMessages(msgs);
@@ -74,7 +75,7 @@ export function ChatContainer() {
         load();
     }, [activeChatId]);
 
-    const {streamMessage} = useChatStream();
+    const {streamMessage, cancelStream} = useChatStream();
 
     // Phase F2.5 — long-lived chat-events SSE subscription that
     // surfaces in-flight Bloom progress as inline cards under the
@@ -119,87 +120,105 @@ export function ChatContainer() {
             setMessages((prev) => [...prev, assistantMsg]);
 
             try {
-                await streamMessage(
-                    activeChatId,
-                    text,
-                    files.length > 0 ? files : null,
-                    {
-                        onToken: (token) => {
+                 await streamMessage(
+                     activeChatId,
+                     text,
+                     files.length > 0 ? files : null,
+                     {
+                         onToken: (token) => {
+                             setMessages((prev) =>
+                                 prev.map((m) =>
+                                     m.id === assistantId
+                                         ? {...m, content: m.content + token}
+                                         : m,
+                                 ),
+                             );
+                         },
+                         onStatus: (agent, agentStatus, preview) => {
+                             let content: string;
+                             if (agentStatus === "started") {
+                                 content = `${agent} agent activated`;
+                             } else if (agentStatus === "done" && preview) {
+                                 const short = preview.length > 150 ? preview.slice(0, 150) + "\u2026" : preview;
+                                 content = `${agent}: ${short}`;
+                             } else {
+                                 return;
+                             }
+                             const statusMsg: Message = {
+                                 id: crypto.randomUUID(),
+                                 role: "system",
+                                 content,
+                                 timestamp: new Date(),
+                             };
+                             setMessages((prev) => {
+                                 const last = prev[prev.length - 1];
+                                 return [...prev.slice(0, -1), statusMsg, last];
+                             });
+                         },
+                         onAgentResult: () => {},
+                         onHandoff: (content) => {
+                             const handoffMsg: Message = {
+                                 id: crypto.randomUUID(),
+                                 role: "system",
+                                 content,
+                                 timestamp: new Date(),
+                             };
+                             setMessages((prev) => {
+                                 const last = prev[prev.length - 1];
+                                 return [...prev.slice(0, -1), handoffMsg, last];
+                             });
+                         },
+                        onDone: (response, agentsUsed, authRequired, cancelled) => {
                             setMessages((prev) =>
                                 prev.map((m) =>
                                     m.id === assistantId
-                                        ? {...m, content: m.content + token}
+                                        ? {
+                                              ...m,
+                                              content: response || m.content,
+                                              agentsUsed,
+                                              cancelled: cancelled || m.cancelled,
+                                          }
                                         : m,
                                 ),
                             );
-                        },
-                        onStatus: (agent, agentStatus, preview) => {
-                            let content: string;
-                            if (agentStatus === "started") {
-                                content = `${agent} agent activated`;
-                            } else if (agentStatus === "done" && preview) {
-                                const short = preview.length > 150 ? preview.slice(0, 150) + "\u2026" : preview;
-                                content = `${agent}: ${short}`;
-                            } else {
-                                return;
-                            }
-                            const statusMsg: Message = {
-                                id: crypto.randomUUID(),
-                                role: "system",
-                                content,
-                                timestamp: new Date(),
-                            };
-                            setMessages((prev) => {
-                                const last = prev[prev.length - 1];
-                                return [...prev.slice(0, -1), statusMsg, last];
-                            });
-                        },
-                        onAgentResult: () => {},
-                        onHandoff: (content) => {
-                            const handoffMsg: Message = {
-                                id: crypto.randomUUID(),
-                                role: "system",
-                                content,
-                                timestamp: new Date(),
-                            };
-                            setMessages((prev) => {
-                                const last = prev[prev.length - 1];
-                                return [...prev.slice(0, -1), handoffMsg, last];
-                            });
-                        },
-                        onDone: (response, agentsUsed, authRequired) => {
-                            setMessages((prev) =>
-                                prev.map((m) =>
-                                    m.id === assistantId
-                                        ? {...m, content: response || m.content, agentsUsed}
-                                        : m,
-                                ),
-                            );
-                            // Surface unauthorised MCP servers to the
-                            // header chip so it auto-expands and pulses.
-                            if (authRequired && authRequired.length > 0) {
-                                window.dispatchEvent(
-                                    new CustomEvent("mcp-auth-needed", {
-                                        detail: {servers: authRequired},
-                                    }),
-                                );
-                            }
-                        },
-                        onError: (error) => {
-                            if (error.includes("Not authenticated")) {
-                                signOut({callbackUrl: "/login"});
-                                return;
-                            }
-                            setMessages((prev) =>
-                                prev.map((m) =>
-                                    m.id === assistantId
-                                        ? {...m, content: m.content || `Error: ${error}`}
-                                        : m,
-                                ),
-                            );
-                        },
-                    },
-                );
+                             // Surface unauthorised MCP servers to the
+                             // header chip so it auto-expands and pulses.
+                             if (authRequired && authRequired.length > 0) {
+                                 window.dispatchEvent(
+                                     new CustomEvent("mcp-auth-needed", {
+                                         detail: {servers: authRequired},
+                                     }),
+                                 );
+                             }
+                         },
+                         onError: (error) => {
+                             if (error.includes("Not authenticated")) {
+                                 signOut({callbackUrl: "/login"});
+                                 return;
+                             }
+                             setMessages((prev) =>
+                                 prev.map((m) =>
+                                     m.id === assistantId
+                                         ? {...m, content: m.content || `Error: ${error}`}
+                                         : m,
+                                 ),
+                             );
+                         },
+                         onCancel: () => {
+                             setMessages((prev) =>
+                                 prev.map((m) =>
+                                     m.id === assistantId
+                                         ? {
+                                               ...m,
+                                               content: m.content || "_Execution cancelled._",
+                                               cancelled: true,
+                                           }
+                                         : m,
+                                 ),
+                             );
+                         },
+                     },
+                 );
             } catch {
                 setMessages((prev) =>
                     prev.map((m) =>
@@ -263,6 +282,8 @@ export function ChatContainer() {
 
                 <ChatInput
                     onSend={handleSend}
+                    onCancel={cancelStream}  // NEW — directly wires to the hook
+                    isLoading={isLoading}
                     disabled={isLoading || !activeChatId}
                     uploading={uploading}
                     externalFiles={droppedFiles}
