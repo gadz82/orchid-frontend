@@ -1,10 +1,12 @@
 "use client";
 
 import {useState, useRef, useCallback, useMemo} from "react";
-import {Send, Paperclip, X, FileText, Loader2} from "lucide-react";
+import {Send, Paperclip, Square, X, FileText, Loader2} from "lucide-react";
 
 interface ChatInputProps {
     onSend: (message: string, files: File[]) => void;
+    onCancel?: () => void;
+    isLoading?: boolean;
     disabled?: boolean;
     uploading?: boolean;
     /** Externally staged files (e.g. from drag-and-drop) */
@@ -22,6 +24,8 @@ import {ACCEPTED_INPUT_STRING as ACCEPTED} from "@/lib/constants";
  */
 export function ChatInput({
                               onSend,
+                              onCancel,
+                              isLoading,
                               disabled,
                               uploading,
                               externalFiles = [],
@@ -136,7 +140,6 @@ export function ChatInput({
                     onChange={handleFileSelect}
                     className="hidden"
                 />
-
                 <textarea
                     ref={textareaRef}
                     value={value}
@@ -154,17 +157,28 @@ export function ChatInput({
                      focus:border-orchid-accent focus:outline-none focus:ring-2
                      focus:ring-orchid-accent/20 transition-colors disabled:opacity-50"
                 />
-                <button
-                    onClick={handleSubmit}
-                    disabled={disabled || uploading || !value.trim()}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
-                     bg-orchid-accent text-white transition-all
-                     hover:bg-orchid-accent-hover hover:shadow-glow disabled:opacity-40
-                     disabled:cursor-not-allowed"
-                    aria-label="Send message"
-                >
-                    <Send className="h-4 w-4"/>
-                </button>
+                {isLoading && onCancel ? (
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="rounded-lg bg-red-500/20 p-2 text-red-400 hover:bg-red-500/30"
+                        title="Stop generation"
+                    >
+                        <Square className="h-4 w-4"/>
+                    </button>
+                ) : (
+                    <button
+                        onClick={handleSubmit}
+                        disabled={disabled || uploading || !value.trim()}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
+                         bg-orchid-accent text-white transition-all
+                         hover:bg-orchid-accent-hover hover:shadow-glow disabled:opacity-40
+                         disabled:cursor-not-allowed"
+                        aria-label="Send message"
+                    >
+                        <Send className="h-4 w-4"/>
+                    </button>
+                )}
             </div>
             <p className="mt-1.5 text-center text-[10px] text-orchid-muted/60">
                 Press Enter to send, Shift+Enter for new line

@@ -8,8 +8,9 @@ export interface StreamCallbacks {
     onStatus: (agent: string, status: string, preview?: string) => void;
     onAgentResult: (agent: string, content: string) => void;
     onHandoff: (content: string) => void;
-    onDone: (response: string, agentsUsed: string[], authRequired: string[]) => void;
+    onDone: (response: string, agentsUsed: string[], authRequired: string[], cancelled?: boolean) => void;
     onError: (error: string) => void;
+    onCancel: () => void;
 }
 
 /**
@@ -100,6 +101,7 @@ export function useChatStream() {
                                         data.response || "",
                                         data.agents_used || [],
                                         data.auth_required || [],
+                                        data.cancelled || false,
                                     );
                                     break;
                                 case "agent_result":
@@ -117,12 +119,15 @@ export function useChatStream() {
                         }
                     }
                 }
-            } catch (err) {
-                if ((err as Error).name === "AbortError") return;
-                callbacks.onError(
-                    `Stream error: ${err instanceof Error ? err.message : String(err)}`,
-                );
-            }
+} catch (err) {
+    if ((err as Error).name === "AbortError") {
+        callbacks.onCancel?.();
+        return;
+    }
+    callbacks.onError(
+        `Stream error: ${err instanceof Error ? err.message : String(err)}`,
+    );
+}
         },
         [],
     );
