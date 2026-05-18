@@ -17,6 +17,12 @@ export interface Message {
      * Bloom-originated messages from real-time turns.
      */
     metadata?: Record<string, unknown> | null;
+    /**
+     * Indicates the message was cancelled by the user during streaming.
+     * The message content reflects the partial response generated
+     * before cancellation.
+     */
+    cancelled?: boolean;
 }
 
 interface MessageBubbleProps {
@@ -110,13 +116,20 @@ export function MessageBubble({message}: MessageBubbleProps) {
                     </div>
                 )}
 
-                {/* Timestamp */}
-                <p className="mt-1 text-[10px] text-orchid-muted/60">
-                    {message.timestamp.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                    })}
-                </p>
+                 {/* Cancelled badge */}
+                 {message.cancelled && (
+                     <p className="mt-1 inline-block rounded bg-red-500/10 px-2 py-0.5 text-[10px] text-red-400/60">
+                         cancelled
+                     </p>
+                 )}
+                 
+                 {/* Timestamp */}
+                 <p className="mt-1 text-[10px] text-orchid-muted/60">
+                     {message.timestamp.toLocaleTimeString([], {
+                         hour: "2-digit",
+                         minute: "2-digit",
+                     })}
+                 </p>
             </div>
         </div>
     );
