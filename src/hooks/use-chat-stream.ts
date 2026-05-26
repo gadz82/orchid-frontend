@@ -3,11 +3,20 @@
 import {useCallback, useRef} from "react";
 import {getStreamConfig} from "@/app/actions/stream";
 
+export interface ActivityEvent {
+    type: string;
+    agent: string;
+    tool?: string;
+    skill?: string;
+    result_preview?: string;
+}
+
 export interface StreamCallbacks {
     onToken: (token: string) => void;
     onStatus: (agent: string, status: string, preview?: string) => void;
     onAgentResult: (agent: string, content: string) => void;
     onHandoff: (content: string) => void;
+    onActivity: (event: ActivityEvent) => void;
     onDone: (response: string, agentsUsed: string[], authRequired: string[], cancelled?: boolean) => void;
     onError: (error: string) => void;
     onCancel: () => void;
@@ -109,6 +118,17 @@ export function useChatStream() {
                                     break;
                                 case "handoff":
                                     callbacks.onHandoff(data.content || "");
+                                    break;
+                                case "tool.started":
+                                case "tool.finished":
+                                case "skill.adopted":
+                                    callbacks.onActivity({
+                                        type: data.type,
+                                        agent: data.agent || "",
+                                        tool: data.tool,
+                                        skill: data.skill,
+                                        result_preview: data.result_preview,
+                                    });
                                     break;
                                 case "error":
                                     callbacks.onError(data.message || "Unknown error");

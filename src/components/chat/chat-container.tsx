@@ -139,7 +139,11 @@ export function ChatContainer() {
                              if (agentStatus === "started") {
                                  content = `${agent} agent activated`;
                              } else if (agentStatus === "done" && preview) {
-                                 const short = preview.length > 150 ? preview.slice(0, 150) + "\u2026" : preview;
+                                 const trimmed = preview.trim();
+                                 const looksLikeJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+                                 const short = looksLikeJson
+                                     ? "completed"
+                                     : (preview.length > 150 ? preview.slice(0, 150) + "\u2026" : preview);
                                  content = `${agent}: ${short}`;
                              } else {
                                  return;
@@ -156,6 +160,28 @@ export function ChatContainer() {
                              });
                          },
                          onAgentResult: () => {},
+                         onActivity: (event) => {
+                             let content: string;
+                             if (event.type === "tool.started") {
+                                 content = `${event.agent} → using tool: ${event.tool}`;
+                             } else if (event.type === "tool.finished") {
+                                 content = `${event.agent} → tool ${event.tool} completed`;
+                             } else if (event.type === "skill.adopted") {
+                                 content = `${event.agent} adopted skill: ${event.skill}`;
+                             } else {
+                                 return;
+                             }
+                             const activityMsg: Message = {
+                                 id: crypto.randomUUID(),
+                                 role: "system",
+                                 content,
+                                 timestamp: new Date(),
+                             };
+                             setMessages((prev) => {
+                                 const last = prev[prev.length - 1];
+                                 return [...prev.slice(0, -1), activityMsg, last];
+                             });
+                         },
                          onHandoff: (content) => {
                              const handoffMsg: Message = {
                                  id: crypto.randomUUID(),

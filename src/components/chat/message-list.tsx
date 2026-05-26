@@ -51,7 +51,7 @@ function groupMessages(messages: Message[]) {
 }
 
 function SystemMessageGroup({messages}: { messages: Message[] }) {
-    const [expanded, setExpanded] = useState(false);
+    const [expanded, setExpanded] = useState(true);
     const last = messages[messages.length - 1];
     const hasMore = messages.length > 1;
 
@@ -60,7 +60,7 @@ function SystemMessageGroup({messages}: { messages: Message[] }) {
             {expanded && hasMore && (
                 <div className="space-y-0.5 mb-0.5">
                     {messages.slice(0, -1).map((m) => (
-                        <p key={m.id} className="text-[10px] text-orchid-muted/50 italic text-center">
+                        <p key={m.id} className="text-sm text-orchid-muted/80 italic text-center">
                             {m.content}
                         </p>
                     ))}
@@ -70,12 +70,12 @@ function SystemMessageGroup({messages}: { messages: Message[] }) {
                 className={`flex items-center gap-1.5 ${hasMore ? "cursor-pointer" : ""}`}
                 onClick={hasMore ? () => setExpanded(!expanded) : undefined}
             >
-                <p className="text-[11px] text-orchid-muted/70 italic">
+                <p className="text-sm text-orchid-muted/90 italic">
                     {last.content}
                 </p>
                 {hasMore && (
                     <ChevronDown
-                        className={`h-3 w-3 text-orchid-muted/50 transition-transform ${expanded ? "rotate-180" : ""}`}
+                        className={`h-4 w-4 text-orchid-muted/80 transition-transform ${expanded ? "rotate-180" : ""}`}
                     />
                 )}
             </div>
