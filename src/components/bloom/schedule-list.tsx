@@ -30,7 +30,7 @@ export function ScheduleList({
     if (loading && schedules.length === 0) {
         return (
             <div
-                className="animate-pulse rounded-lg border border-orchid-border bg-white p-4 text-sm text-orchid-muted"
+                className="animate-pulse rounded-lg border border-orchid-border bg-orchid-card p-4 text-sm text-orchid-muted"
                 aria-label="Loading schedules"
             >
                 Loading schedules…
@@ -46,7 +46,7 @@ export function ScheduleList({
         );
     }
     return (
-        <div className="overflow-x-auto rounded-lg border border-orchid-border bg-white">
+        <div className="overflow-x-auto rounded-lg border border-orchid-border bg-orchid-card">
             <table className="w-full text-sm" aria-label="Bloom schedules">
                 <thead className="bg-orchid-surface text-orchid-dark text-xs uppercase tracking-wide">
                     <tr>
@@ -130,8 +130,8 @@ function ScheduleRow({
                     onClick={handleToggle}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-orchid-accent focus-visible:outline-offset-2 ${
                         optimistic
-                            ? "bg-orchid-accent/20 text-orchid-dark"
-                            : "bg-gray-200 text-gray-900"
+                            ? "bg-orchid-accent/20 text-orchid-text"
+                            : "bg-orchid-surface text-orchid-muted"
                     } disabled:opacity-50`}
                 >
                     {optimistic ? "Enabled" : "Disabled"}

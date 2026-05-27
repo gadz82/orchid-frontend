@@ -27,7 +27,7 @@ export function TriggerList({
         );
     }
     return (
-        <div className="overflow-x-auto rounded-lg border border-orchid-border bg-white">
+        <div className="overflow-x-auto rounded-lg border border-orchid-border bg-orchid-card">
             <table className="w-full text-sm" aria-label="Bloom triggers">
                 <thead className="bg-orchid-surface text-orchid-dark text-xs uppercase tracking-wide">
                     <tr>

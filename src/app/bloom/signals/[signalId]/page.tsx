@@ -51,7 +51,7 @@ export default function SignalDetailPage({
     }
     if (signal === null) {
         return (
-            <div className="rounded-md border border-orchid-border bg-white p-8 text-center">
+            <div className="rounded-md border border-orchid-border bg-orchid-card p-8 text-center">
                 <h2 className="text-lg font-semibold mb-2">Signal not found</h2>
                 <p className="text-sm text-orchid-muted">
                     Signal does not exist, or is not visible to you.
@@ -153,7 +153,7 @@ export default function SignalDetailPage({
 
 function KvPanel({title, rows}: {title: string; rows: [string, string][]}) {
     return (
-        <div className="rounded-md border border-orchid-border bg-white p-4">
+        <div className="rounded-md border border-orchid-border bg-orchid-card p-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-orchid-muted mb-2">
                 {title}
             </h3>

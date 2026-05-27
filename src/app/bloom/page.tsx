@@ -55,7 +55,7 @@ function StatusFilter({
                 const v = event.target.value;
                 onChange(v === "all" ? undefined : (v as BloomRunStatus));
             }}
-            className="text-sm rounded-md border border-orchid-border bg-white px-3 py-1.5"
+            className="text-sm rounded-md border border-orchid-border bg-orchid-card text-orchid-text px-3 py-1.5"
             aria-label="Filter runs by status"
         >
             {STATUS_OPTIONS.map((opt) => (

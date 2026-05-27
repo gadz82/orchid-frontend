@@ -37,7 +37,7 @@ export function RunList({
         );
     }
     return (
-        <div className="overflow-x-auto rounded-lg border border-orchid-border bg-white">
+        <div className="overflow-x-auto rounded-lg border border-orchid-border bg-orchid-card">
             <table
                 className="w-full text-sm"
                 aria-label="Bloom runs"
@@ -105,7 +105,7 @@ export function RunList({
 function RunListSkeleton() {
     return (
         <div
-            className="animate-pulse rounded-lg border border-orchid-border bg-white"
+            className="animate-pulse rounded-lg border border-orchid-border bg-orchid-card"
             aria-label="Loading runs"
         >
             {[0, 1, 2, 3].map((i) => (

@@ -117,7 +117,7 @@ export function RunDetail({
                     Result
                 </h2>
                 {run.error !== null && run.error !== "" ? (
-                    <div className="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-900">
+                    <div className="rounded-md bg-red-500/10 border border-red-500/30 p-4 text-sm text-red-400">
                         <p className="font-semibold mb-1">Error</p>
                         <pre className="whitespace-pre-wrap font-mono text-xs">
                             {run.error}
@@ -130,7 +130,7 @@ export function RunDetail({
                         {!isTerminal && ", still in flight"}.
                     </p>
                 ) : (
-                    <pre className="rounded-md bg-orchid-surface border border-orchid-border p-4 text-xs whitespace-pre-wrap overflow-x-auto">
+                    <pre className="rounded-md bg-orchid-card border border-orchid-border p-4 text-xs text-orchid-text whitespace-pre-wrap overflow-x-auto">
                         {JSON.stringify(run.result, null, 2)}
                     </pre>
                 )}
@@ -150,7 +150,7 @@ export function RunDetail({
                         disabled={pending || isTerminal}
                         aria-label={`Cancel run ${run.run_id}`}
                         aria-busy={pending}
-                        className="px-3 py-1.5 rounded-md text-sm bg-orchid-surface text-orchid-dark border border-orchid-border hover:bg-white focus-visible:outline-2 focus-visible:outline-orchid-accent focus-visible:outline-offset-2 disabled:opacity-50"
+                        className="px-3 py-1.5 rounded-md text-sm bg-orchid-surface text-orchid-text border border-orchid-border hover:bg-orchid-card focus-visible:outline-2 focus-visible:outline-orchid-accent focus-visible:outline-offset-2 disabled:opacity-50"
                     >
                         Cancel
                     </button>
@@ -186,7 +186,7 @@ function KvPanel({
     rows: [string, string][];
 }) {
     return (
-        <div className="rounded-md border border-orchid-border bg-white p-4">
+        <div className="rounded-md border border-orchid-border bg-orchid-card p-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-orchid-muted mb-2">
                 {title}
             </h3>

@@ -90,7 +90,7 @@ export function RunStreamPane({runId, disabled = false}: RunStreamPaneProps) {
                 aria-live="polite"
                 aria-relevant="additions"
                 aria-label="Bloom run event log"
-                className="h-64 overflow-y-auto rounded-md border border-orchid-border bg-white text-xs font-mono"
+                className="h-64 overflow-y-auto rounded-md border border-orchid-border bg-orchid-card text-xs font-mono text-orchid-text"
             >
                 {events.length === 0 ? (
                     <EmptyState status={status} error={error} />
@@ -136,11 +136,11 @@ function StreamStatusBadge({
         },
         connecting: {
             label: "Connecting…",
-            classes: "bg-amber-50 text-amber-800",
+            classes: "bg-amber-500/10 text-amber-400",
         },
         open: {
             label: `Live · ${count}`,
-            classes: "bg-green-50 text-green-800",
+            classes: "bg-green-500/10 text-green-400",
         },
         finished: {
             label: `Finished · ${count}`,
@@ -148,7 +148,7 @@ function StreamStatusBadge({
         },
         error: {
             label: "Disconnected",
-            classes: "bg-red-50 text-red-800",
+            classes: "bg-red-500/10 text-red-400",
         },
     };
     const meta = map[status];
@@ -171,7 +171,7 @@ function EmptyState({
 }) {
     if (status === "error") {
         return (
-            <p className="px-3 py-4 text-sm text-red-700">
+            <p className="px-3 py-4 text-sm text-red-400">
                 Stream error{error !== null ? `: ${error}` : ""}.
             </p>
         );

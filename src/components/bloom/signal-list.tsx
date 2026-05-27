@@ -25,7 +25,7 @@ export function SignalList({
         );
     }
     return (
-        <div className="overflow-x-auto rounded-lg border border-orchid-border bg-white">
+        <div className="overflow-x-auto rounded-lg border border-orchid-border bg-orchid-card">
             <table className="w-full text-sm" aria-label="Bloom signals">
                 <thead className="bg-orchid-surface text-orchid-dark text-xs uppercase tracking-wide">
                     <tr>
@@ -78,7 +78,7 @@ export function SignalList({
 function SignalListSkeleton() {
     return (
         <div
-            className="animate-pulse rounded-lg border border-orchid-border bg-white"
+            className="animate-pulse rounded-lg border border-orchid-border bg-orchid-card"
             aria-label="Loading signals"
         >
             {[0, 1, 2].map((i) => (

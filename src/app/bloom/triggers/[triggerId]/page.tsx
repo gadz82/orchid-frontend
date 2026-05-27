@@ -41,7 +41,7 @@ export default function TriggerDetailPage({
     }
     if (trigger === null) {
         return (
-            <div className="rounded-md border border-orchid-border bg-white p-8 text-center">
+            <div className="rounded-md border border-orchid-border bg-orchid-card p-8 text-center">
                 <h2 className="text-lg font-semibold mb-2">Trigger not found</h2>
                 <p className="text-sm text-orchid-muted">
                     No trigger with id <code>{triggerId}</code> is registered.

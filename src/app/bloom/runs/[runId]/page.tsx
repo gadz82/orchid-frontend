@@ -22,7 +22,7 @@ export default function BloomRunDetailPage({
     }
     if (run === null) {
         return (
-            <div className="rounded-md border border-orchid-border bg-white p-8 text-center">
+            <div className="rounded-md border border-orchid-border bg-orchid-card p-8 text-center">
                 <h2 className="text-lg font-semibold mb-2">Run not found</h2>
                 <p className="text-sm text-orchid-muted">
                     The run does not exist, or it&apos;s not visible to your

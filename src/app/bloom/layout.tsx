@@ -23,11 +23,11 @@ export default function BloomLayout({children}: {children: ReactNode}) {
         <div className="min-h-screen bg-orchid-surface text-orchid-dark">
             <a
                 href="#bloom-main"
-                className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:bg-white focus:text-orchid-accent focus:px-3 focus:py-1 focus:rounded-md focus:shadow"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:bg-orchid-card focus:text-orchid-accent focus:px-3 focus:py-1 focus:rounded-md focus:shadow"
             >
                 Skip to main content
             </a>
-            <header className="border-b border-orchid-border bg-white">
+            <header className="border-b border-orchid-border bg-orchid-card">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                     <h1 className="text-lg font-semibold flex items-center gap-2">
                         <Activity
@@ -99,8 +99,8 @@ function NavLink({
             aria-current={isActive ? "page" : undefined}
             className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors focus-visible:outline-2 focus-visible:outline-orchid-accent focus-visible:outline-offset-2 ${
                 isActive
-                    ? "bg-white text-orchid-accent font-medium"
-                    : "text-orchid-dark hover:bg-white hover:text-orchid-accent"
+                    ? "bg-orchid-card text-orchid-accent font-medium"
+                    : "text-orchid-muted hover:bg-orchid-card hover:text-orchid-accent"
             }`}
         >
             {icon}
