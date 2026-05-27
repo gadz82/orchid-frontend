@@ -27,6 +27,7 @@ describe("useChatStream", () => {
         await result.current.streamMessage("test-chat", "test message", null, {
             onToken: vi.fn(),
             onStatus: vi.fn(),
+            onActivity: vi.fn(),
             onDone: vi.fn(),
             onError: onError,
             onAgentResult: vi.fn(),
@@ -51,6 +52,7 @@ describe("useChatStream", () => {
         await result.current.streamMessage("test-chat", "test message", null, {
             onToken: vi.fn(),
             onStatus: vi.fn(),
+            onActivity: vi.fn(),
             onDone: vi.fn(),
             onError: onError,
             onAgentResult: vi.fn(),
