@@ -19,21 +19,22 @@ export interface BloomTrigger {
 }
 
 export async function listTriggers(): Promise<BloomTrigger[]> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(`${AGENTS_API_URL}/jobs`, {
+        res = await fetch(`${AGENTS_API_URL}/jobs`, {
             method: "GET",
             headers,
             cache: "no-store",
         });
-        if (res.status === 401) await handleUnauthorized();
-        if (!res.ok) return [];
-        const body = (await res.json()) as {items?: BloomTrigger[]};
-        return body.items ?? [];
     } catch (err) {
         console.error("[listTriggers]", err);
         return [];
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (!res.ok) return [];
+    const body = (await res.json()) as {items?: BloomTrigger[]};
+    return body.items ?? [];
 }
 
 /**

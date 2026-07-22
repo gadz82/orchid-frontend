@@ -23,50 +23,53 @@ export interface BloomSchedule {
 }
 
 export async function listSchedules(): Promise<BloomSchedule[]> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(`${AGENTS_API_URL}/schedules`, {
+        res = await fetch(`${AGENTS_API_URL}/schedules`, {
             method: "GET",
             headers,
             cache: "no-store",
         });
-        if (res.status === 401) await handleUnauthorized();
-        if (res.status === 404) return [];
-        if (!res.ok) return [];
-        const body = (await res.json()) as {items?: BloomSchedule[]};
-        return body.items ?? [];
     } catch (err) {
         console.error("[listSchedules]", err);
         return [];
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (res.status === 404) return [];
+    if (!res.ok) return [];
+    const body = (await res.json()) as {items?: BloomSchedule[]};
+    return body.items ?? [];
 }
 
 export async function getSchedule(
     scheduleId: string,
 ): Promise<BloomSchedule | null> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(
+        res = await fetch(
             `${AGENTS_API_URL}/schedules/${encodeURIComponent(scheduleId)}`,
             {method: "GET", headers, cache: "no-store"},
         );
-        if (res.status === 401) await handleUnauthorized();
-        if (res.status === 404) return null;
-        if (!res.ok) return null;
-        return (await res.json()) as BloomSchedule;
     } catch (err) {
         console.error("[getSchedule]", err);
         return null;
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    return (await res.json()) as BloomSchedule;
 }
 
 export async function setScheduleEnabled(
     scheduleId: string,
     enabled: boolean,
 ): Promise<BloomSchedule | {error: string}> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(
+        res = await fetch(
             `${AGENTS_API_URL}/schedules/${encodeURIComponent(scheduleId)}`,
             {
                 method: "PATCH",
@@ -74,13 +77,13 @@ export async function setScheduleEnabled(
                 body: JSON.stringify({enabled}),
             },
         );
-        if (res.status === 401) await handleUnauthorized();
-        if (!res.ok) {
-            const text = await res.text();
-            return {error: `patch failed (${res.status}): ${text}`};
-        }
-        return (await res.json()) as BloomSchedule;
     } catch (err) {
         return {error: String(err)};
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (!res.ok) {
+        const text = await res.text();
+        return {error: `patch failed (${res.status}): ${text}`};
+    }
+    return (await res.json()) as BloomSchedule;
 }

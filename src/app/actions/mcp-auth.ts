@@ -28,72 +28,72 @@ export type MCPAuthorizeResult =
 // ── Server Actions ──────────────────────────────────────────
 
 export async function listMCPAuthServers(): Promise<MCPServerAuthStatus[]> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(`${AGENTS_API_URL}/mcp/auth/servers`, {
+        res = await fetch(`${AGENTS_API_URL}/mcp/auth/servers`, {
             method: "GET",
             headers,
         });
-        if (res.status === 401) await handleUnauthorized();
-        if (!res.ok) return [];
-        return await res.json();
     } catch {
         return [];
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (!res.ok) return [];
+    return await res.json();
 }
 
 export async function getMCPAuthorizeUrl(serverName: string): Promise<MCPAuthorizeResult> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(`${AGENTS_API_URL}/mcp/auth/servers/${encodeURIComponent(serverName)}/authorize`, {
+        res = await fetch(`${AGENTS_API_URL}/mcp/auth/servers/${encodeURIComponent(serverName)}/authorize`, {
             method: "GET",
             headers,
         });
-        if (res.status === 401) await handleUnauthorized();
-        if (!res.ok) {
-            // Surface the API's ``detail`` field when present — the
-            // authorize endpoint uses it to explain misconfiguration
-            // (e.g. "Cannot resolve authorization endpoint for 'foo'").
-            let detail = "";
-            try {
-                const body = await res.json();
-                detail = typeof body?.detail === "string" ? body.detail : "";
-            } catch {
-                try {
-                    detail = await res.text();
-                } catch {
-                    detail = "";
-                }
-            }
-            return {
-                kind: "error",
-                message: detail || `Authorization request failed (${res.status})`,
-                status: res.status,
-            };
-        }
-        const data = await res.json();
-        if (!data?.authorize_url) {
-            return {kind: "error", message: "API did not return an authorization URL"};
-        }
-        return {kind: "ok", url: data.authorize_url};
     } catch (err) {
         return {
             kind: "error",
             message: err instanceof Error ? err.message : String(err),
         };
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (!res.ok) {
+        let detail = "";
+        try {
+            const body = await res.json();
+            detail = typeof body?.detail === "string" ? body.detail : "";
+        } catch {
+            try {
+                detail = await res.text();
+            } catch {
+                detail = "";
+            }
+        }
+        return {
+            kind: "error",
+            message: detail || `Authorization request failed (${res.status})`,
+            status: res.status,
+        };
+    }
+    const data = await res.json();
+    if (!data?.authorize_url) {
+        return {kind: "error", message: "API did not return an authorization URL"};
+    }
+    return {kind: "ok", url: data.authorize_url};
 }
 
 export async function revokeMCPToken(serverName: string): Promise<boolean> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(`${AGENTS_API_URL}/mcp/auth/servers/${encodeURIComponent(serverName)}/token`, {
+        res = await fetch(`${AGENTS_API_URL}/mcp/auth/servers/${encodeURIComponent(serverName)}/token`, {
             method: "DELETE",
             headers,
         });
-        if (res.status === 401) await handleUnauthorized();
-        return res.ok || res.status === 204;
     } catch {
         return false;
     }
+    if (res.status === 401) await handleUnauthorized();
+    return res.ok || res.status === 204;
 }

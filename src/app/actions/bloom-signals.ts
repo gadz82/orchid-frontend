@@ -40,6 +40,7 @@ export interface BloomSignalFilter {
 export async function listSignals(
     filter: BloomSignalFilter = {},
 ): Promise<BloomSignal[]> {
+    let res: Response;
     try {
         const headers = await getHeaders();
         const params = new URLSearchParams();
@@ -48,57 +49,59 @@ export async function listSignals(
         if (filter.since !== undefined) params.set("since", filter.since);
         if (filter.limit !== undefined) params.set("limit", String(filter.limit));
         const qs = params.toString();
-        const res = await fetch(
+        res = await fetch(
             qs ? `${AGENTS_API_URL}/signals?${qs}` : `${AGENTS_API_URL}/signals`,
             {method: "GET", headers, cache: "no-store"},
         );
-        if (res.status === 401) await handleUnauthorized();
-        if (res.status === 404) return [];
-        if (!res.ok) return [];
-        const body = (await res.json()) as {items?: BloomSignal[]};
-        return body.items ?? [];
     } catch (err) {
         console.error("[listSignals]", err);
         return [];
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (res.status === 404) return [];
+    if (!res.ok) return [];
+    const body = (await res.json()) as {items?: BloomSignal[]};
+    return body.items ?? [];
 }
 
 export async function getSignal(
     signalId: string,
 ): Promise<BloomSignal | null> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(
+        res = await fetch(
             `${AGENTS_API_URL}/signals/${encodeURIComponent(signalId)}`,
             {method: "GET", headers, cache: "no-store"},
         );
-        if (res.status === 401) await handleUnauthorized();
-        if (res.status === 404) return null;
-        if (!res.ok) return null;
-        return (await res.json()) as BloomSignal;
     } catch (err) {
         console.error("[getSignal]", err);
         return null;
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    return (await res.json()) as BloomSignal;
 }
 
 export async function replaySignal(
     signalId: string,
 ): Promise<{queueMsgId: string} | {error: string}> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(
+        res = await fetch(
             `${AGENTS_API_URL}/signals/${encodeURIComponent(signalId)}/replay`,
             {method: "POST", headers},
         );
-        if (res.status === 401) await handleUnauthorized();
-        if (!res.ok) {
-            const text = await res.text();
-            return {error: `replay failed (${res.status}): ${text}`};
-        }
-        const body = (await res.json()) as {queue_msg_id: string};
-        return {queueMsgId: body.queue_msg_id};
     } catch (err) {
         return {error: String(err)};
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (!res.ok) {
+        const text = await res.text();
+        return {error: `replay failed (${res.status}): ${text}`};
+    }
+    const body = (await res.json()) as {queue_msg_id: string};
+    return {queueMsgId: body.queue_msg_id};
 }

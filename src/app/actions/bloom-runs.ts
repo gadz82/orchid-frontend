@@ -58,6 +58,7 @@ export interface BloomRunFilter {
 export async function listRuns(
     filter: BloomRunFilter = {},
 ): Promise<BloomRun[]> {
+    let res: Response;
     try {
         const session = await auth();
         if (!session?.accessToken) return [];
@@ -68,79 +69,82 @@ export async function listRuns(
         if (filter.since !== undefined) params.set("since", filter.since);
         if (filter.limit !== undefined) params.set("limit", String(filter.limit));
         const qs = params.toString();
-        const res = await fetch(
+        res = await fetch(
             qs ? `${AGENTS_API_URL}/runs?${qs}` : `${AGENTS_API_URL}/runs`,
             {method: "GET", headers, cache: "no-store"},
         );
-        if (res.status === 401) await handleUnauthorized();
-        if (!res.ok) return [];
-        const body = (await res.json()) as {items?: BloomRun[]};
-        return body.items ?? [];
     } catch (err) {
         console.error("[listRuns]", err);
         return [];
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (!res.ok) return [];
+    const body = (await res.json()) as {items?: BloomRun[]};
+    return body.items ?? [];
 }
 
 export async function getRun(runId: string): Promise<BloomRunDetail | null> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(
+        res = await fetch(
             `${AGENTS_API_URL}/runs/${encodeURIComponent(runId)}`,
             {method: "GET", headers, cache: "no-store"},
         );
-        if (res.status === 401) await handleUnauthorized();
-        if (res.status === 404) return null;
-        if (!res.ok) return null;
-        return (await res.json()) as BloomRunDetail;
     } catch (err) {
         console.error("[getRun]", err);
         return null;
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    return (await res.json()) as BloomRunDetail;
 }
 
 export async function cancelRun(
     runId: string,
 ): Promise<{ok: true} | {error: string}> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(
+        res = await fetch(
             `${AGENTS_API_URL}/runs/${encodeURIComponent(runId)}/cancel`,
             {method: "POST", headers},
         );
-        if (res.status === 401) await handleUnauthorized();
-        if (!res.ok) {
-            const text = await res.text();
-            return {error: `cancel failed (${res.status}): ${text}`};
-        }
-        return {ok: true};
     } catch (err) {
         return {error: String(err)};
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (!res.ok) {
+        const text = await res.text();
+        return {error: `cancel failed (${res.status}): ${text}`};
+    }
+    return {ok: true};
 }
 
 export async function retryRun(
     runId: string,
 ): Promise<{queueMsgId: string; previousRunId: string} | {error: string}> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(
+        res = await fetch(
             `${AGENTS_API_URL}/runs/${encodeURIComponent(runId)}/retry`,
             {method: "POST", headers},
         );
-        if (res.status === 401) await handleUnauthorized();
-        if (!res.ok) {
-            const text = await res.text();
-            return {error: `retry failed (${res.status}): ${text}`};
-        }
-        const body = (await res.json()) as {
-            queue_msg_id: string;
-            previous_run_id: string;
-        };
-        return {queueMsgId: body.queue_msg_id, previousRunId: body.previous_run_id};
     } catch (err) {
         return {error: String(err)};
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (!res.ok) {
+        const text = await res.text();
+        return {error: `retry failed (${res.status}): ${text}`};
+    }
+    const body = (await res.json()) as {
+        queue_msg_id: string;
+        previous_run_id: string;
+    };
+    return {queueMsgId: body.queue_msg_id, previousRunId: body.previous_run_id};
 }
 
 /** List runs filtered by trigger — wraps ``listRuns`` for clarity in

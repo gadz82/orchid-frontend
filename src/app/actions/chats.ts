@@ -42,68 +42,80 @@ export interface ChatResult {
 // ── CRUD ────────────────────────────────────────────────────
 
 export async function createChat(title?: string): Promise<ChatSession | null> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(`${AGENTS_API_URL}/chats`, {
+        res = await fetch(`${AGENTS_API_URL}/chats`, {
             method: "POST",
             headers,
             body: JSON.stringify({title: title || ""}),
         });
-        if (res.status === 401) await handleUnauthorized();
-        if (!res.ok) {
-            const text = await res.text();
-            console.error("[createChat] failed:", res.status, text);
-            return null;
-        }
-        return await res.json();
     } catch (err) {
-        console.error("[createChat] error:", err);
+        console.error("[createChat] network error:", err);
         return null;
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (!res.ok) {
+        const text = await res.text();
+        console.error("[createChat] failed:", res.status, text);
+        return null;
+    }
+    return await res.json();
 }
 
 export async function listChats(): Promise<ChatSession[]> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(`${AGENTS_API_URL}/chats`, {
+        res = await fetch(`${AGENTS_API_URL}/chats`, {
             method: "GET",
             headers,
         });
-        if (res.status === 401) await handleUnauthorized();
-        if (!res.ok) return [];
-        return await res.json();
     } catch {
         return [];
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (!res.ok) return [];
+    return await res.json();
 }
 
 export async function loadMessages(chatId: string): Promise<ChatMessageOut[]> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(`${AGENTS_API_URL}/chats/${chatId}/messages`, {
+        res = await fetch(`${AGENTS_API_URL}/chats/${chatId}/messages`, {
             method: "GET",
             headers,
         });
-        if (res.status === 401) await handleUnauthorized();
-        if (!res.ok) return [];
-        return await res.json();
     } catch {
         return [];
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (!res.ok) return [];
+    return await res.json();
 }
 
 export async function deleteChat(chatId: string): Promise<boolean> {
+    let res: Response;
     try {
-        const headers = await getHeaders();
-        const res = await fetch(`${AGENTS_API_URL}/chats/${chatId}`, {
+        const allHeaders = await getHeaders();
+        const headers: Record<string, string> = {};
+        for (const [k, v] of Object.entries(allHeaders)) {
+            if (k !== "Content-Type") headers[k] = v;
+        }
+        res = await fetch(`${AGENTS_API_URL}/chats/${chatId}`, {
             method: "DELETE",
             headers,
         });
-        if (res.status === 401) await handleUnauthorized();
-        return res.ok;
-    } catch {
+    } catch (err) {
+        console.error("[deleteChat] network error:", err);
         return false;
     }
+    if (res.status === 401) await handleUnauthorized();
+    if (!res.ok) {
+        console.error("[deleteChat] failed:", res.status, await res.text());
+    }
+    return res.ok;
 }
 
 export async function sendChatMessage(
@@ -121,13 +133,13 @@ export async function sendChatMessage(
         };
     }
 
+    let res: Response;
     try {
         const token = session.accessToken;
         const authHeaders: Record<string, string> = {
             ...(token ? {Authorization: `Bearer ${token}`} : {}),
         };
 
-        // Build multipart form (message + optional files)
         const formData = new FormData();
         formData.append("message", message);
 
@@ -138,31 +150,11 @@ export async function sendChatMessage(
             }
         }
 
-        const res = await fetch(`${AGENTS_API_URL}/chats/${chatId}/messages`, {
+        res = await fetch(`${AGENTS_API_URL}/chats/${chatId}/messages`, {
             method: "POST",
-            headers: authHeaders, // No Content-Type — browser sets multipart boundary
+            headers: authHeaders,
             body: formData,
         });
-
-        if (res.status === 401) await handleUnauthorized();
-
-        if (!res.ok) {
-            const text = await res.text();
-            return {
-                response: "",
-                chatId,
-                agentsUsed: [],
-                error: `API error ${res.status}: ${text}`,
-            };
-        }
-
-        const data = await res.json();
-        return {
-            response: data.response,
-            chatId: data.chat_id ?? chatId,
-            agentsUsed: data.agents_used ?? [],
-            authRequired: data.auth_required ?? [],
-        };
     } catch (err) {
         return {
             response: "",
@@ -171,18 +163,39 @@ export async function sendChatMessage(
             error: `Network error: ${err instanceof Error ? err.message : String(err)}`,
         };
     }
+
+    if (res.status === 401) await handleUnauthorized();
+
+    if (!res.ok) {
+        const text = await res.text();
+        return {
+            response: "",
+            chatId,
+            agentsUsed: [],
+            error: `API error ${res.status}: ${text}`,
+        };
+    }
+
+    const data = await res.json();
+    return {
+        response: data.response,
+        chatId: data.chat_id ?? chatId,
+        agentsUsed: data.agents_used ?? [],
+        authRequired: data.auth_required ?? [],
+    };
 }
 
 export async function shareChat(chatId: string): Promise<boolean> {
+    let res: Response;
     try {
         const headers = await getHeaders();
-        const res = await fetch(`${AGENTS_API_URL}/chats/${chatId}/share`, {
+        res = await fetch(`${AGENTS_API_URL}/chats/${chatId}/share`, {
             method: "POST",
             headers,
         });
-        if (res.status === 401) await handleUnauthorized();
-        return res.ok;
     } catch {
         return false;
     }
+    if (res.status === 401) await handleUnauthorized();
+    return res.ok;
 }
