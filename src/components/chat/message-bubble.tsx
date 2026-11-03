@@ -29,6 +29,7 @@ interface MessageBubbleProps {
     message: Message;
 }
 
+// ORCHID-MEM: 01a1a0c1-dccb-783c-90d5-a86660784b01 — chat bubble with Bloom-origin marker
 /**
  * Single chat message bubble — user messages on the right, assistant on the left.
  * Assistant messages are rendered as Markdown.
